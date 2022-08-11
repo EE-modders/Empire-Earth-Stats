@@ -1,3 +1,14 @@
+# Better
+.directory
+.vs
+Debug
+Release
+curl
+
+*.pdb
+*.zip
+*.lib
+
 # Prerequisites
 *.d
 
