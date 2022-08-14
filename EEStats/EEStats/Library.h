@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MatomoEE.h"
+#include "EEStats.h"
 
 #include <string>
 #include <Shlwapi.h>
@@ -14,8 +14,7 @@ static const unsigned int EES_VERSION_PATCH = 0;
 // END EES VERSION
 
 // EES HARD-CODED SETTINGS
-const std::string EES_SETTINGS_URL = "https://stats.empireearth.eu/matomo.php";
-const std::string EES_SETTINGS_ID = "2";
+const std::string EES_SETTINGS_URL = "https://stats.empireearth.eu/eestats/";
 // END EES HARD-CODED SETTINGS
 
 void* lib = nullptr;
@@ -23,18 +22,18 @@ void* lib = nullptr;
 class Library
 {
 private:
-    MatomoEE* _matomo = nullptr;
+    EEStats* _ees = nullptr;
 
 public:
     Library() {
         showMessage("Loading...", "Library");
-        _matomo = new MatomoEE(EES_SETTINGS_URL, EES_SETTINGS_ID, "WIP", EES_VERSION_STR);
+        _ees = new EEStats(EES_SETTINGS_URL, EES_VERSION_STR);
         showMessage("Loaded!", "Library");
     }
 
     ~Library() {
         showMessage("Unloading...", "Library");
-        delete _matomo;
+        delete _ees;
         showMessage("Unloaded!", "Library");
         Sleep(5000);
     }
@@ -68,7 +67,7 @@ public:
         return reinterpret_cast<Library*>(lib);
     }
 
-    MatomoEE* getMatomo() {
-        return _matomo;
+    EEStats* getEES() {
+        return _ees;
     }
 };

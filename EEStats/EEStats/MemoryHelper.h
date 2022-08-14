@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <minwindef.h>
 
 struct memoryPTR {
     DWORD base_address;

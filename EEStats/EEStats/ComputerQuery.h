@@ -3,6 +3,7 @@
 #include <string>
 #include <winnt.h>
 #include <windef.h>
+#include <iostream>
 
 class ComputerQuery
 {
@@ -10,6 +11,14 @@ class ComputerQuery
 	// TODO: Maybe cache those info or cache the generated ua/header of matomo
 
 public:
+
+	ComputerQuery::ComputerQuery()
+	{
+		std::cout << "Wine: " << isWine() << std::endl;
+		std::cout << "DirectX: " << getDirectX_MajorVersion() << std::endl;
+		std::cout << "VM: " << runInVM() << std::endl;
+		std::cout << "UID: " << getUID() << std::endl;
+	};
 
 	// Memory
 	DWORDLONG getRAM();
@@ -32,6 +41,10 @@ public:
 	std::string getProcessorLoadPercentage();
 	std::string getProcessorCurrentCorePercentage();
 
+	// DX
+	int getDirectX_MajorVersion();
+	std::string getDirectX_WrapperVersion();
+
 	// Screen
 	SIZE getWindowsResolution();
 
@@ -41,6 +54,22 @@ public:
 	// Wine
 	bool isWine();
 	const char* getWineVersion();
+
+	// VM
+	bool runInVirtualPC();
+	bool runInVMWare();
+	bool runInVirtualBox();
+	bool runInHyperviror();
+	bool runInOtherVM();
+	bool runInVM();
+
+	// UID
+	std::string getBiosSerial();
+
+	std::string getUID()
+	{
+		return "dummy";
+	}
 
 	// Windows
 	typedef enum WindowsVersion {

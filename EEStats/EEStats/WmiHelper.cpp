@@ -8,7 +8,6 @@
 
 #pragma comment(lib, "wbemuuid.lib")
 
-
 std::wstring queryWMI(const char* query, LPCWSTR value)
 {
     HRESULT hres;

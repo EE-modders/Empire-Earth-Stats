@@ -10,16 +10,14 @@
 #include <future>
 #include <map>
 
-int lastAllowedPingThread = 0;
-
 unsigned int __stdcall PingThread(void* data)
 {
     showMessage("Enter Thread!", "PingThread");
     while (1) {
         // Every 10min send ping to keep session alive during >30min sessions withou screen change
         Sleep(600000); //600000
-        if (Library::getLib() != nullptr && Library::getLib()->getMatomo() != nullptr)
-            Library::getLib()->getMatomo()->sendPing();
+        if (Library::getLib() != nullptr && Library::getLib()->getEES() != nullptr)
+            Library::getLib()->getEES()->sendPing();
         else
             showMessage("Unable to recover Matomo or Lib instance!!!", "PingThread", true);
 
@@ -114,7 +112,7 @@ unsigned int __stdcall delamerde(void* data)
 unsigned int __stdcall MainThread(void* data)
 {
     showMessage("Enter Thread!", "MainThread");
-    MatomoEE* matomo = Library::getLib()->getMatomo();
+    EEStats* ees = Library::getLib()->getEES();
     GameQuery gq("");
 
     gq.setVersionSuffix(" (EE Stats v1.0.0)"); // TODO: A shared lib :V (.lib ? or .dll ? idk)
@@ -127,11 +125,25 @@ unsigned int __stdcall MainThread(void* data)
     showMessage(gq.getGameVersion(), "MainThread");
     if (!gq.isSupportedVersion()) {
         showMessage("Your game version isn't supported, stats about specific game feature are disabled...", "MainThread", true);
-        matomo->sendScreen(GameQuery::ScreenType::Unknown);
+        //ees->askSessionId();
         return 0; // The ping clock will still run so we can track the session time
     }
 
-    HANDLE pingThreadHandle = (HANDLE)_beginthreadex(0, 0, PingThread, &matomo, 0, 0);
+    showMessage("Asking a session id for current session...", "MainThread");
+    if (!ees->askSessionId()) {
+        showMessage("Unable to get a session id!", "MainThread");
+        return false;
+    }
+    showMessage("Session id for this session is " + ees->getSessionId(), "MainThread");
+
+    showMessage("Sending current session infos...", "MainThread");
+    if (!ees->sendSessionInfos()) {
+        showMessage("Unable to send session infos!", "MainThread");
+        return false;
+    }
+    showMessage("Session infos sent sucessfully...", "MainThread");
+
+    HANDLE pingThreadHandle = (HANDLE)_beginthreadex(0, 0, PingThread, &ees, 0, 0);
     HANDLE perfThreadHandle = (HANDLE)_beginthreadex(0, 0, delamerde, 0, 0, 0);
 
     GameQuery::ScreenType lastScreen = GameQuery::ScreenType::Unknown;
@@ -141,14 +153,10 @@ unsigned int __stdcall MainThread(void* data)
         GameQuery::ScreenType currentScreen = gq.getCurrentScreen();
         if ((lastScreen == GameQuery::ScreenType::Unknown && currentScreen != GameQuery::ScreenType::Unknown)
             || lastScreen != gq.getCurrentScreen()) {
-
-            auto success = std::async(std::launch::async,
-                [matomo, currentScreen]() {
-                    matomo->sendScreen(currentScreen);
-                });
-            
+            // SEND SCREEN
             lastScreen = currentScreen;
         }
+
         Sleep(5000); // Every 5s TODO: HOOK !!! A loop to check the screen is disastrous
     }
     showMessage("Exit Thread!", "MainThread"); // Will sadly never work...
@@ -184,7 +192,9 @@ bool __stdcall Detach(void)
     showMessage("Detach!", "DllMain");
     if (Library::DestroyLibrary()) {
         FreeConsole();
-        Sleep(5000);
+#ifdef _DEBUG
+        //Sleep(5000); // Keep the console open for 5s (if not killed before) to read output if required
+#endif
         return true;
     }
     return false;
@@ -200,9 +210,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
         case DLL_PROCESS_ATTACH: {
             return Attach();
         }
-        case DLL_THREAD_ATTACH: // Disabled
+        case DLL_THREAD_ATTACH:
             break;
-        case DLL_THREAD_DETACH: // Disabled
+        case DLL_THREAD_DETACH:
             break;
         case DLL_PROCESS_DETACH: {
             return Detach();

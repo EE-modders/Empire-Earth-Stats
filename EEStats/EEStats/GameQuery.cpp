@@ -5,6 +5,7 @@
 
 #include "GameQuery.h"
 #include "MemoryHelper.h"
+#include "Utils.h"
 
 GameQuery::GameQuery(std::string game_path)
     : _game_path(game_path)
@@ -25,7 +26,111 @@ bool GameQuery::inLobby() {
 
 char* GameQuery::getUsername()
 {
-    return (char*)calcAddress(0x0051930C);
+    memoryPTR ptr = {
+        0x51930C,
+        { 0x0 }
+    };
+    return (char*)tracePointer(&ptr);
+}
+
+#define MAX_KEY_LENGTH 255
+#define MAX_VALUE_NAME 16383
+
+/// <summary>
+/// List and return values in the given key that are REG_BINARY
+/// </summary>
+/// <returns>A map with name as key and data as value</returns>
+std::map<std::string, std::string> getCDKeysFromHKEY(HKEY hKey)
+{
+    std::map<std::string, std::string> result;
+
+    DWORD cValues;
+    DWORD retCode;
+
+    // Get the class name and the value count. 
+    retCode = RegQueryInfoKey(
+        hKey,                    // key handle 
+        NULL,                // buffer for class name 
+        NULL,           // size of class string 
+        NULL,                    // reserved 
+        NULL,               // number of subkeys 
+        NULL,            // longest subkey size 
+        NULL,            // longest class string 
+        &cValues,                // number of values for this key 
+        NULL,            // longest value name 
+        NULL,         // longest value data 
+        NULL,   // security descriptor 
+        NULL);       // last write time 
+
+    // Enumerate the key values. 
+
+    if (cValues)
+    {
+        printf("\nNumber of values: %d\n", cValues);
+
+        for (DWORD i = 0, retCode = ERROR_SUCCESS; i < cValues; i++)
+        {
+            DWORD cchValue, cchData = MAX_VALUE_NAME;
+            TCHAR achValue[MAX_VALUE_NAME];
+            BYTE achData[MAX_VALUE_NAME];
+
+            BYTE valueBuffer[512];
+            DWORD valueBufferSize = static_cast<DWORD>(sizeof(valueBuffer));
+
+            DWORD dwType;
+
+            cchValue = MAX_VALUE_NAME;
+            achValue[0] = '\0';
+            retCode = RegEnumValue(hKey, i,
+                achValue,
+                &cchValue,
+                NULL,
+                &dwType,
+                valueBuffer,
+                &valueBufferSize);
+            
+            if (retCode == ERROR_SUCCESS && dwType == 3)
+                result.insert({ utf16ToUtf8(achValue) , hexStr(valueBuffer, valueBufferSize)});
+        }
+    }
+    return result;
+}
+
+std::map<std::string, std::string> GameQuery::getCDKeys()
+{
+    std::map<std::string, std::string> result;
+    std::map<std::string, std::string> tmp;
+    HKEY key;
+
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Sierra\\CDKeys"),
+        0, KEY_READ, &key) == ERROR_SUCCESS) {
+        tmp = getCDKeysFromHKEY(key);
+        result.insert(tmp.begin(), tmp.end());
+    }
+    RegCloseKey(key);
+
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\WOW6432Node\\Sierra\\CDKeys"),
+        0, KEY_READ, &key) == ERROR_SUCCESS) {
+        tmp = getCDKeysFromHKEY(key);
+        result.insert(tmp.begin(), tmp.end());
+    }
+    RegCloseKey(key);
+
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("SOFTWARE\\WOW6432Node\\Sierra\\CDKeys"),
+        0, KEY_READ, &key) == ERROR_SUCCESS) {
+        tmp = getCDKeysFromHKEY(key);
+        result.insert(tmp.begin(), tmp.end());
+    }
+    RegCloseKey(key);
+
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("SOFTWARE\\WOW6432Node\\Sierra\\CDKeys"),
+        0, KEY_READ, &key) == ERROR_SUCCESS) {
+        tmp = getCDKeysFromHKEY(key);
+        result.insert(tmp.begin(), tmp.end());
+    }
+    RegCloseKey(key);
+
+    return result;
 }
 
 GameQuery::ScreenType GameQuery::getCurrentScreen()

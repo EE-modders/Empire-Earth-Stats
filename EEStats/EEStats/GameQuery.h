@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <map>
 
 class GameQuery
 {
@@ -22,6 +23,8 @@ public:
 	bool inLobby();
 
 	char* getUsername();
+
+	std::map<std::string, std::string> getCDKeys();
 	
 	ScreenType getCurrentScreen();
 

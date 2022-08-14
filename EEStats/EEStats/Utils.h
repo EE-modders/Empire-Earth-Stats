@@ -3,6 +3,16 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <codecvt>
+#include <iomanip>
+
+#include <string>
+#include <regex>
+
+static void trim(std::string& s) {
+    s.erase(s.begin(), std::find_if_not(s.begin(), s.end(), [](char c) { return std::isspace(c); }));
+    s.erase(std::find_if_not(s.rbegin(), s.rend(), [](char c) { return std::isspace(c); }).base(), s.end());
+}
 
 static void replaceAll(std::string& str, const std::string& from, const std::string& to) {
     if (from.empty())
@@ -33,9 +43,9 @@ static void showMessage(std::string msg, std::string scope = "", bool error = fa
     }
 
     if (error)
-        ss << "[ERROR] ";
+        ss << "[ERR] ";
     else
-        ss << "[INFO] ";
+        ss << "[INF] ";
 
     if (!scope.empty())
         ss << "(" << scope << ") ";
@@ -56,4 +66,54 @@ static void showMessage(std::string msg, std::string scope = "", bool error = fa
 static void showMessage(char* msg, std::string scope = "", bool error = false, bool show_time = true)
 {
     showMessage(std::string(msg), scope, error, show_time); // Big brain moment
+}
+
+static bool doesFileExist(LPCWSTR lpszFilename)
+{
+    return ((GetFileAttributes(lpszFilename) != INVALID_FILE_ATTRIBUTES)
+        && (GetLastError() == ERROR_FILE_NOT_FOUND));
+}
+
+static void ToUpper(std::string& str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+}
+
+static void ToLower(unsigned char* Pstr)
+{
+    char* P = (char*)Pstr;
+    unsigned long length = strlen(P);
+    for (unsigned long i = 0; i < length; i++) P[i] = tolower(P[i]);
+    return;
+}
+
+static void ToLower(wchar_t* Pstr)
+{
+    wchar_t* P = (wchar_t*)Pstr;
+    unsigned long length = wcslen(P);
+    for (unsigned long i = 0; i < length; i++) P[i] = tolower(P[i]);
+    return;
+}
+
+static std::wstring utf8ToUtf16(const std::string& utf8Str)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+    return conv.from_bytes(utf8Str);
+}
+
+static std::string utf16ToUtf8(const std::wstring& utf16Str)
+{
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+    return conv.to_bytes(utf16Str);
+}
+
+static std::string hexStr(BYTE* data, int len)
+{
+    std::stringstream ss;
+    ss << std::hex;
+
+    for (int i(0); i < len; ++i)
+        ss << std::setw(2) << std::setfill('0') << (int)data[i];
+
+    return ss.str();
 }
