@@ -36,7 +36,7 @@ std::string ComputerQuery::getSimpleRAM(bool gonly)
 
 std::string ComputerQuery::getGraphicVendorId()
 {
-    std::wstring fullpath = queryWMI("SELECT PNPDeviceID FROM Win32_VideoController", L"PNPDeviceID");
+    std::wstring fullpath = _wmiHelper->queryWMI("SELECT PNPDeviceID FROM Win32_VideoController", L"PNPDeviceID").at(0);
 
     std::wstring pre_identifier = L"VEN_";
 
@@ -56,7 +56,7 @@ std::string ComputerQuery::getGraphicVendorId()
 
 std::string ComputerQuery::getGraphicDeviceId()
 {
-    std::wstring fullpath = queryWMI("SELECT PNPDeviceID FROM Win32_VideoController", L"PNPDeviceID");
+    std::wstring fullpath = _wmiHelper->queryWMI("SELECT PNPDeviceID FROM Win32_VideoController", L"PNPDeviceID").at(0);
 
     std::wstring pre_identifier = L"DEV_";
 
@@ -77,7 +77,7 @@ std::string ComputerQuery::getGraphicDeviceId()
 // Never use the GPU name as identifier since vendor may change it for no reasons over time
 std::string ComputerQuery::getGraphicName()
 {
-    std::wstring name = queryWMI("SELECT Name FROM Win32_VideoController", L"Name");
+    std::wstring name = _wmiHelper->queryWMI("SELECT Name FROM Win32_VideoController", L"Name").at(0);
 
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
     return conv.to_bytes(name);
@@ -85,7 +85,7 @@ std::string ComputerQuery::getGraphicName()
 
 std::string ComputerQuery::getGraphicVersion()
 {
-    std::wstring name = queryWMI("SELECT DriverVersion FROM Win32_VideoController", L"DriverVersion");
+    std::wstring name = _wmiHelper->queryWMI("SELECT DriverVersion FROM Win32_VideoController", L"DriverVersion").at(0);
 
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
     return conv.to_bytes(name);
@@ -93,7 +93,7 @@ std::string ComputerQuery::getGraphicVersion()
 
 std::string ComputerQuery::getGraphicCurrentRefreshRate()
 {
-    std::wstring name = queryWMI("SELECT CurrentRefreshRate FROM Win32_VideoController", L"CurrentRefreshRate");
+    std::wstring name = _wmiHelper->queryWMI("SELECT CurrentRefreshRate FROM Win32_VideoController", L"CurrentRefreshRate").at(0);
 
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
     return conv.to_bytes(name);
@@ -101,7 +101,7 @@ std::string ComputerQuery::getGraphicCurrentRefreshRate()
 
 std::string ComputerQuery::getGraphicCurrentBitsPerPixel()
 {
-    std::wstring name = queryWMI("SELECT CurrentBitsPerPixel FROM Win32_VideoController", L"CurrentBitsPerPixel");
+    std::wstring name = _wmiHelper->queryWMI("SELECT CurrentBitsPerPixel FROM Win32_VideoController", L"CurrentBitsPerPixel").at(0);
 
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
     return conv.to_bytes(name);
@@ -109,7 +109,7 @@ std::string ComputerQuery::getGraphicCurrentBitsPerPixel()
 
 std::string ComputerQuery::getGraphicDedicatedMemory()
 {
-    std::wstring name = queryWMI("SELECT AdapterRAM FROM Win32_VideoController", L"AdapterRAM");
+    std::wstring name = _wmiHelper->queryWMI("SELECT AdapterRAM FROM Win32_VideoController", L"AdapterRAM").at(0);
 
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
     return conv.to_bytes(name);
@@ -244,19 +244,9 @@ const char* ComputerQuery::getWineVersion()
     return NULL;
 }
 
-std::string getComputerSerial()
-{
-    std::string name = utf16ToUtf8(queryWMI("SELECT UUID FROM Win32_ComputerSystemProduct ", L"UUID"));
-    trim(name);
-    ToUpper(name);
-    if (name.compare("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF") == 0)
-        return "";
-    return name;
-}
-
 ComputerQuery::WindowsVersion ComputerQuery::getWindowsVersion()
 {
-    std::wstring version_wmi = queryWMI("SELECT * FROM Win32_OperatingSystem", L"Version");
+    std::wstring version_wmi = _wmiHelper->queryWMI("SELECT Version FROM Win32_OperatingSystem", L"Version").at(0);
 
     if (version_wmi.empty()) {
         std::cout << "Unable to recover version from WMI !" << std::endl;
@@ -264,7 +254,7 @@ ComputerQuery::WindowsVersion ComputerQuery::getWindowsVersion()
     }
 
     if (version_wmi.find_first_of(L"10.") == 0) {
-        std::wstring version_wmi = queryWMI("SELECT * FROM Win32_OperatingSystem", L"BuildNumber");
+        std::wstring version_wmi = _wmiHelper->queryWMI("SELECT BuildNumber FROM Win32_OperatingSystem", L"BuildNumber").at(0);
         if (!version_wmi.empty() && std::stoi(version_wmi) >= 22000) // this is a real disaster
             return Win11;
         return Win10;

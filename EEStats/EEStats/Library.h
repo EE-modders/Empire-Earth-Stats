@@ -3,7 +3,6 @@
 #include "EEStats.h"
 
 #include <string>
-#include <Shlwapi.h>
 #include <iostream>
 
 // EES VERSION
@@ -17,7 +16,7 @@ static const unsigned int EES_VERSION_PATCH = 0;
 const std::string EES_SETTINGS_URL = "https://stats.empireearth.eu/eestats/";
 // END EES HARD-CODED SETTINGS
 
-void* lib = nullptr;
+static void* lib = nullptr;
 
 class Library
 {
@@ -38,6 +37,8 @@ public:
         Sleep(5000);
     }
 
+    static bool StartLibraryThread();
+
     static bool InitLibrary() {
         showMessage("Init Library...", "Library");
         if (lib) {
@@ -46,7 +47,7 @@ public:
         }
         lib = new Library();
         showMessage("Library Initialized!", "Library");
-        return true;
+        return StartLibraryThread();
     }
 
     static bool DestroyLibrary() {
@@ -55,7 +56,7 @@ public:
             showMessage("Library Already Destroyed...", "Library");
             return false;
         }
-        delete lib;
+        delete (Library*)lib;
         lib = nullptr;
         showMessage("Library Destroyed!", "Library");
         return true;

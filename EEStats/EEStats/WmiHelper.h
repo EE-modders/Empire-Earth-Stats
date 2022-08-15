@@ -1,5 +1,23 @@
 #pragma once
-#include <wtypes.h>
-#include <oleauto.h>
+#include <vector>
+#include <unordered_map>
+#include <Wbemidl.h>
+#include <atlcomcli.h>
 
-std::wstring queryWMI(const char* query, LPCWSTR value);
+class WmiHelper
+{
+public:
+	WmiHelper();
+	~WmiHelper();
+
+	bool InitWmi();
+
+	std::vector<std::wstring> queryWMI(const char* query, LPCWSTR value);
+	std::unordered_multimap<std::wstring, std::wstring> queryKeyValWMI(const char* query, LPCWSTR asKey, LPCWSTR asValue);
+
+private:
+	bool _init = false;
+	// CComPtr<...> is better but crash...
+	IWbemLocator* _pLoc;
+	IWbemServices* _pSvc;
+};

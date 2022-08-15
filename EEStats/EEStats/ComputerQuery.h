@@ -5,21 +5,14 @@
 #include <windef.h>
 #include <iostream>
 
+#include "WmiHelper.h"
+
 class ComputerQuery
 {
 
-	// TODO: Maybe cache those info or cache the generated ua/header of matomo
+	// TODO: Maybe cache those info or cache the infos
 
 public:
-
-	ComputerQuery::ComputerQuery()
-	{
-		std::cout << "Wine: " << isWine() << std::endl;
-		std::cout << "DirectX: " << getDirectX_MajorVersion() << std::endl;
-		std::cout << "VM: " << runInVM() << std::endl;
-		std::cout << "UID: " << getUID() << std::endl;
-	};
-
 	// Memory
 	DWORDLONG getRAM();
 	std::string getSimpleRAM(bool gonly = false);
@@ -30,7 +23,7 @@ public:
 	std::string getGraphicName();
 	std::string getGraphicVersion();
 	std::string getGraphicCurrentRefreshRate();
-	std::string getGraphicMaxRefreshRate();
+	// std::string getGraphicMaxRefreshRate();
 	std::string getGraphicCurrentBitsPerPixel();
 	std::string getGraphicDedicatedMemory();
 	
@@ -59,17 +52,17 @@ public:
 	bool runInVirtualPC();
 	bool runInVMWare();
 	bool runInVirtualBox();
-	bool runInHyperviror();
 	bool runInOtherVM();
 	bool runInVM();
 
 	// UID
 	std::string getBiosSerial();
+	std::string getComputerSerial();
+	std::string getWindowsDiskSerial();
+	std::string getUID();
 
-	std::string getUID()
-	{
-		return "dummy";
-	}
+	// Info
+	void printInfos();
 
 	// Windows
 	typedef enum WindowsVersion {
@@ -77,6 +70,9 @@ public:
 	} WindowsVersion;
 	
 	WindowsVersion getWindowsVersion();
+
+private:
+	std::unique_ptr<WmiHelper> _wmiHelper = std::make_unique<WmiHelper>();
 
 };
 

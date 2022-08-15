@@ -5,6 +5,7 @@
 #include <iostream>
 #include <codecvt>
 #include <iomanip>
+#include <fstream>
 
 #include <string>
 #include <regex>
@@ -87,14 +88,6 @@ static void ToLower(unsigned char* Pstr)
     return;
 }
 
-static void ToLower(wchar_t* Pstr)
-{
-    wchar_t* P = (wchar_t*)Pstr;
-    unsigned long length = wcslen(P);
-    for (unsigned long i = 0; i < length; i++) P[i] = tolower(P[i]);
-    return;
-}
-
 static std::wstring utf8ToUtf16(const std::string& utf8Str)
 {
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
@@ -116,4 +109,37 @@ static std::string hexStr(BYTE* data, int len)
         ss << std::setw(2) << std::setfill('0') << (int)data[i];
 
     return ss.str();
+}
+
+static std::string getConfigEntry(std::string name, std::string key, bool allow_space = true)
+{
+    std::string result = "";
+    std::fstream newfile;
+
+    // All WON config entry have that ('key:value' is not supported by the lobby, but 'key: value' work)
+    key += ": ";
+
+    newfile.open(name, std::ios::in);
+    if (newfile.good() == false) {
+        showMessage("Unable to create file buffer for \"" + name + "\" !", "getConfigEntry", true);
+        return result;
+    }
+
+    if (newfile.is_open()) {
+        std::string tmp;
+        while (std::getline(newfile, tmp)) { // I don't like that... but it work lol
+            if (size_t index = tmp.find(key) != std::string::npos) { // We find the key
+                tmp.erase(index - 1, key.length()); // Remove key from the line
+                if (!allow_space) // Remove any space
+                    tmp.erase(remove(tmp.begin(), tmp.end(), ' '), tmp.end());
+                result = tmp;
+                break;
+            }
+        }
+        newfile.close();
+    }
+    else {
+        showMessage("Unable to open file \"" + name + "\" !", "getConfigEntry", true);
+    }
+    return result;
 }

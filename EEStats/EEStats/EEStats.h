@@ -22,6 +22,9 @@
 #include <string>
 #include <map>
 
+unsigned int __stdcall MainThread(void* data);
+unsigned int __stdcall PingThread(void* data);
+
 class EEStats
 {
 
@@ -43,13 +46,25 @@ public:
 
 	std::string getSessionId();
 
+	unsigned int MainThread();
+
+	ComputerQuery* getComputerQuery()
+	{
+		return _cq.get();
+	}
+
+	GameQuery* getGameQuery()
+	{
+		return _gq.get();
+	}
+
 private:
 	std::string _base_url;
 	std::string _session_id;
 	std::string _lib_version;
 
-	ComputerQuery* _cq;
-	GameQuery* _gq;
+	std::unique_ptr<ComputerQuery> _cq = std::make_unique<ComputerQuery>();
+	std::unique_ptr<GameQuery> _gq = std::make_unique<GameQuery>();
 
 	std::pair<CURLcode, std::pair<long, std::string>> sendRequest(std::string path, std::string post = "");
 	std::string buildUserAgent(struct curl_slist*& headers);

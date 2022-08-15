@@ -9,8 +9,6 @@ EEStats::EEStats(std::string base_url, std::string lib_version) :
 {
     showMessage("Init global cURL...", "EEStats");
     curl_global_init(CURL_GLOBAL_ALL);
-    _cq = new ComputerQuery();
-    _gq = new GameQuery("");
     if (_base_url.at(_base_url.length() - 1) != '/')
         _base_url += _base_url + '/';
     showMessage("cURL global loaded!", "EEStats");
@@ -33,7 +31,11 @@ bool EEStats::askSessionId()
         showMessage("Unable to ask a session id because the user uid is empty!", "EEStats", true);
         return false;
     }
-    args << "user_uid=" << _cq->getUID();
+    else if (uid.length() != 128) {
+        showMessage("User uid seems invalid!", "EEStats", true);
+        return false;
+    }
+    args << "user_uid=" << uid;
 
     // USERNAME
     std::string username = std::string(_gq->getUsername());
@@ -70,9 +72,82 @@ bool EEStats::sendSessionInfos()
         return false;
     }
 
+    GameQuery* gq = getGameQuery();
+    ComputerQuery* cq = getComputerQuery();
+
     std::stringstream args;
     args << "session_uuid=" << _session_id;
 
+    // WON
+    std::string won_product = gq->getWONProductName();
+    if (!won_product.empty())
+        args << "&won_product_name=" << won_product;
+    std::string won_product_dir = gq->getWONProductDirectory();
+    if (!won_product_dir.empty())
+        args << "&won_product_directory=" << won_product_dir;
+    std::string won_product_ver = gq->getWONProductVersion();
+    if (!won_product_ver.empty())
+        args << "&won_product_version=" << won_product_ver;
+    
+    // Game Type
+    args << "&is_expansion=" << ((gq->getProductType() == GameQuery::ProductType::PT_AoC) ? "1" : "0");
+
+    // GPU
+    std::string dev = cq->getGraphicDeviceId();
+    if (!dev.empty())
+        args << "&gpu_device=" << dev;
+    std::string vend = cq->getGraphicVendorId();
+    if (!dev.empty())
+        args << "&gpu_vendor=" << vend;
+    std::string gpu_name = cq->getGraphicName();
+    if (!dev.empty())
+        args << "&gpu_name=" << gpu_name;
+    std::string gpu_version = cq->getGraphicVersion();
+    if (!dev.empty())
+        args << "&gpu_version=" << gpu_version;
+    std::string gpu_refresh_rate = cq->getGraphicCurrentRefreshRate();
+    if (!dev.empty())
+        args << "&gpu_refresh_rate=" << gpu_version;
+    std::string gpu_bits_per_pixel = cq->getGraphicCurrentBitsPerPixel();
+    if (!dev.empty())
+        args << "&gpu_bits_per_pixel=" << gpu_version;
+    std::string gpu_dedicated_memory = cq->getGraphicDedicatedMemory();
+    if (!dev.empty())
+        args << "&gpu_dedicated_memory=" << gpu_version;
+
+    // CPU
+    std::string cpu_id = cq->getProcessorId();
+    if (!dev.empty())
+        args << "&cpu_id=" << gpu_version;
+    std::string cpu_name = cq->getProcessorId();
+    if (!dev.empty())
+        args << "&cpu_name=" << cpu_name;
+    std::string cpu_nb_cores = cq->getProcessorName();
+    if (!dev.empty())
+        args << "&cpu_nb_cores=" << cpu_nb_cores;
+
+    // RAM
+    std::string ram_size = std::to_string(cq->getRAM());
+    if (!dev.empty())
+        args << "&ram_size=" << ram_size;
+
+    // OS
+    std::string post_os_version = std::to_string(cq->getWindowsVersion());
+    if (!dev.empty())
+        args << "&$post_os_version=" << gpu_version;
+    std::string post_os_locale = cq->getWindowsLocale();
+    if (!dev.empty())
+        args << "&post_os_locale=" << post_os_locale;
+
+    // Screen
+    auto size = cq->getWindowsResolution();
+    std::string screen_resolution = std::to_string(size.cx) + "x" + std::to_string(size.cy);
+    if (!dev.empty())
+        args << "&screen_resolution=" << screen_resolution;
+
+
+
+    std::cout << args.str() << std::endl;
     auto user_request = sendRequest("session.php", args.str());
     if (user_request.first != CURLE_OK)
         return false;
@@ -130,13 +205,13 @@ std::pair<CURLcode, std::pair<long, std::string>> EEStats::sendRequest(std::stri
     std::string replyTxt;
     long replyCode;
 
-    std::stringstream ss;
-    ss << _base_url << path;
+    std::string final_url = _base_url + path;
+    replaceAll(final_url, " ", "%20");
 
     // cURL init and options
     curl = curl_easy_init();
 
-    curl_easy_setopt(curl, CURLOPT_URL, ss.str().c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, final_url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &replyTxt);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, ("EmpireEarthStats/" + _lib_version).c_str());

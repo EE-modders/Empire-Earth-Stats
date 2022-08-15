@@ -2,15 +2,33 @@
 
 #include <iostream>
 #include <sstream>
+#include <shlwapi.h>
 
 #include "GameQuery.h"
 #include "MemoryHelper.h"
 #include "Utils.h"
+#include "sha512.h"
 
-GameQuery::GameQuery(std::string game_path)
-    : _game_path(game_path)
+#pragma comment (lib, "Shlwapi.lib")
+
+GameQuery::GameQuery()
 {
-}
+    TCHAR szExeFileName[MAX_PATH];
+    GetModuleFileName(NULL, szExeFileName, MAX_PATH);
+    LPWSTR fileName = PathFindFileName((LPCWSTR) szExeFileName);
+    std::string exeFileName = utf16ToUtf8(fileName);
+
+    ToUpper(exeFileName);
+
+    std::wcout << szExeFileName << std::endl;
+    std::cout << exeFileName << std::endl;
+
+    _productType = PT_Unknown;
+    if (exeFileName.compare("EMPIRE EARTH.EXE") == 0)
+        _productType = PT_EE;
+    else if (exeFileName.compare("EE-AOC.EXE") == 0)
+        _productType = PT_AoC;
+};
 
 bool GameQuery::isLoaded() {
     return 0 != *(int*)calcAddress(0x517BB8);
@@ -32,9 +50,6 @@ char* GameQuery::getUsername()
     };
     return (char*)tracePointer(&ptr);
 }
-
-#define MAX_KEY_LENGTH 255
-#define MAX_VALUE_NAME 16383
 
 /// <summary>
 /// List and return values in the given key that are REG_BINARY
@@ -64,15 +79,14 @@ std::map<std::string, std::string> getCDKeysFromHKEY(HKEY hKey)
 
     // Enumerate the key values. 
 
+    const int MAX_KEY_LENGTH = 255;
+    const int MAX_VALUE_NAME = 16383;
     if (cValues)
     {
-        printf("\nNumber of values: %d\n", cValues);
-
         for (DWORD i = 0, retCode = ERROR_SUCCESS; i < cValues; i++)
         {
             DWORD cchValue, cchData = MAX_VALUE_NAME;
             TCHAR achValue[MAX_VALUE_NAME];
-            BYTE achData[MAX_VALUE_NAME];
 
             BYTE valueBuffer[512];
             DWORD valueBufferSize = static_cast<DWORD>(sizeof(valueBuffer));
@@ -136,13 +150,13 @@ std::map<std::string, std::string> GameQuery::getCDKeys()
 GameQuery::ScreenType GameQuery::getCurrentScreen()
 {
     if (isPlaying() && inLobby())
-        return ScreenType::PlayingOnline;
+        return ST_PlayingOnline;
     else if (isPlaying() && !inLobby())
-        return ScreenType::PlayingSolo;
+        return ST_PlayingSolo;
     else if (!isPlaying() && inLobby())
-        return ScreenType::Lobby;
+        return ST_Lobby;
     else
-        return ScreenType::Menu;
+        return ST_Menu;
 }
 
 char* GameQuery::getGameVersion()
@@ -201,4 +215,30 @@ void GameQuery::setVersionSuffix(std::string suffix)
         asmVersionStrReturnAddr,
         7
     );
+}
+
+std::string GameQuery::getGameChecksum()
+{
+    return sw::sha512::file("Empire Earth.exe");
+}
+
+GameQuery::ProductType GameQuery::getProductType()
+{
+    return _productType;
+}
+
+
+std::string GameQuery::getWONProductName()
+{
+    return getConfigEntry("WONLobby.cfg", "ProductName");
+}
+
+std::string GameQuery::getWONProductDirectory()
+{
+    return getConfigEntry("WONLobby.cfg", "ProductDirectory");
+}
+
+std::string GameQuery::getWONProductVersion()
+{
+    return getConfigEntry("zzWONVersion.cfg", "Version");
 }

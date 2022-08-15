@@ -6,19 +6,25 @@
 class GameQuery
 {
 public:
-	GameQuery(std::string game_path);
+
+	GameQuery();
+
+	enum ProductType {
+		PT_EE,
+		PT_AoC,
+		PT_Unknown
+	};
 
 	enum ScreenType {
-		Menu,
-		PlayingSolo,
-		PlayingOnline,
-		Lobby,
-		Editor,				// Unable to detect yet
-		Unknown
+		ST_Menu,
+		ST_PlayingSolo,
+		ST_PlayingOnline,
+		ST_Lobby,
+		ST_Editor,				// Unable to detect yet
+		ST_Unknown
 	};
 
 	bool isLoaded();
-
 	bool isPlaying();
 	bool inLobby();
 
@@ -33,8 +39,16 @@ public:
 
 	void setVersionSuffix(std::string suffix);
 
+	std::string getGameChecksum();
+	ProductType getProductType();
+
+	std::string getWONProductName();
+	std::string getWONProductDirectory();
+	std::string getWONProductVersion();
+
 private:
 	std::string _game_path;
+	ProductType _productType;
 
 };
 

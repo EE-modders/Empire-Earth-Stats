@@ -145,21 +145,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ComputerQuery.h" />
+    <ClInclude Include="crc.h" />
     <ClInclude Include="EEStats.h" />
     <ClInclude Include="Library.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="GameQuery.h" />
     <ClInclude Include="MemoryHelper.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="sha512.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="WmiHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ComputerQuery.cpp" />
-    <ClCompile Include="ComputerQueryVM.cpp" />
+    <ClCompile Include="ComputerQueryPrivate.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="EEStats.cpp" />
     <ClCompile Include="GameQuery.cpp" />
+    <ClCompile Include="Library.cpp" />
     <ClCompile Include="MemoryHelper.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

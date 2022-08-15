@@ -1,27 +1,25 @@
 #include "pch.h"
 
+#include "WmiHelper.h"
+
 #include <comdef.h>
 #include <iostream>
-#include <Wbemidl.h>
-
-#include "WmiHelper.h"
 
 #pragma comment(lib, "wbemuuid.lib")
 
-std::wstring queryWMI(const char* query, LPCWSTR value)
+WmiHelper::WmiHelper()
 {
     HRESULT hres;
-    std::wstring result = L"";
-
     // Step 1: --------------------------------------------------
     // Initialize COM. ------------------------------------------
 
+    _init = false;
     hres = CoInitializeEx(0, COINIT_MULTITHREADED);
     if (FAILED(hres))
     {
         std::cout << "Failed to initialize COM library. Error code = 0x"
             << std::hex << hres << std::endl;
-        return L"";                  // Program has failed.
+        return;                  // Program has failed.
     }
 
     // Step 2: --------------------------------------------------
@@ -45,19 +43,17 @@ std::wstring queryWMI(const char* query, LPCWSTR value)
         std::cout << "Failed to initialize security. Error code = 0x"
             << std::hex << hres << std::endl;
         CoUninitialize();
-        return L"";                    // Program has failed.
+        return;                    // Program has failed.
     }
 
     // Step 3: ---------------------------------------------------
     // Obtain the initial locator to WMI -------------------------
 
-    IWbemLocator* pLoc = NULL;
-
     hres = CoCreateInstance(
         CLSID_WbemLocator,
         0,
         CLSCTX_INPROC_SERVER,
-        IID_IWbemLocator, (LPVOID*)&pLoc);
+        IID_IWbemLocator, (LPVOID*)&_pLoc);
 
     if (FAILED(hres))
     {
@@ -65,18 +61,16 @@ std::wstring queryWMI(const char* query, LPCWSTR value)
             << " Err code = 0x"
             << std::hex << hres << std::endl;
         CoUninitialize();
-        return L"";                 // Program has failed.
+        return;                 // Program has failed.
     }
 
     // Step 4: -----------------------------------------------------
     // Connect to WMI through the IWbemLocator::ConnectServer method
 
-    IWbemServices* pSvc = NULL;
-
     // Connect to the root\cimv2 namespace with
     // the current user and obtain pointer pSvc
     // to make IWbemServices calls.
-    hres = pLoc->ConnectServer(
+    hres = _pLoc->ConnectServer(
         _bstr_t(L"ROOT\\CIMV2"), // Object path of WMI namespace
         NULL,                    // User name. NULL = current user
         NULL,                    // User password. NULL = current
@@ -84,16 +78,15 @@ std::wstring queryWMI(const char* query, LPCWSTR value)
         NULL,                    // Security flags.
         0,                       // Authority (for example, Kerberos)
         0,                       // Context object 
-        &pSvc                    // pointer to IWbemServices proxy
+        &_pSvc                    // pointer to IWbemServices proxy
     );
 
     if (FAILED(hres))
     {
         std::cout << "Could not connect. Error code = 0x"
             << std::hex << hres << std::endl;
-        pLoc->Release();
         CoUninitialize();
-        return L"";                // Program has failed.
+        return;                // Program has failed.
     }
 
 
@@ -101,7 +94,7 @@ std::wstring queryWMI(const char* query, LPCWSTR value)
     // Set security levels on the proxy -------------------------
 
     hres = CoSetProxyBlanket(
-        pSvc,                        // Indicates the proxy to set
+        _pSvc,                        // Indicates the proxy to set
         RPC_C_AUTHN_WINNT,           // RPC_C_AUTHN_xxx
         RPC_C_AUTHZ_NONE,            // RPC_C_AUTHZ_xxx
         NULL,                        // Server principal name 
@@ -115,18 +108,46 @@ std::wstring queryWMI(const char* query, LPCWSTR value)
     {
         std::cout << "Could not set proxy blanket. Error code = 0x"
             << std::hex << hres << std::endl;
-        pSvc->Release();
-        pLoc->Release();
         CoUninitialize();
-        return L"";               // Program has failed.
+        return;               // Program has failed.
     }
+    _init = true;
+}
+
+WmiHelper::~WmiHelper()
+{
+    if (_init) {
+        /*
+        *
+        * I tried everything... I just can't understand why this keep crashing instant
+        * Storing them as ptr and release them like that don' work
+        * CComPtr also don't work (but not recommanded since CoUninitialize should be call after the Release)
+        *
+        *
+        if (_pSvc)
+            _pSvc->Release();
+        if (_pLoc)
+            _pLoc->Release();
+        *
+        */
+        CoUninitialize();
+    }
+}
+
+std::vector<std::wstring> WmiHelper::queryWMI(const char* query, LPCWSTR value)
+{
+    std::vector<std::wstring> result;
+    HRESULT hres;
+
+    if (!_init)
+        return result;
 
     // Step 6: --------------------------------------------------
     // Use the IWbemServices pointer to make requests of WMI ----
 
     // For example, get the name of the operating system
     IEnumWbemClassObject* pEnumerator = NULL;
-    hres = pSvc->ExecQuery(
+    hres = _pSvc->ExecQuery(
         bstr_t("WQL"),
         bstr_t(query),
         WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
@@ -138,10 +159,7 @@ std::wstring queryWMI(const char* query, LPCWSTR value)
         std::cout << "Query for operating system name failed."
             << " Error code = 0x"
             << std::hex << hres << std::endl;
-        pSvc->Release();
-        pLoc->Release();
-        CoUninitialize();
-        return L"";               // Program has failed.
+        return result;               // Program has failed.
     }
 
     // Step 7: -------------------------------------------------
@@ -155,7 +173,7 @@ std::wstring queryWMI(const char* query, LPCWSTR value)
         HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1,
             &pclsObj, &uReturn);
 
-        if (0 == uReturn)
+        if (0 == uReturn || hr != S_OK)
         {
             break;
         }
@@ -163,22 +181,82 @@ std::wstring queryWMI(const char* query, LPCWSTR value)
         VARIANT vtProp;
 
         VariantInit(&vtProp);
+
         // Get the value of the Name property
         hr = pclsObj->Get(value, 0, &vtProp, 0, 0);
-        result = vtProp.bstrVal;
+        if (hr == S_OK && vtProp.bstrVal != nullptr && vtProp.cVal != '\x1') // Not 100% sure but when cVal is '\x1' it crash :V
+            result.push_back(vtProp.bstrVal);
 
         VariantClear(&vtProp);
 
         pclsObj->Release();
     }
-
-    // Cleanup
-    // ========
-
-    pSvc->Release();
-    pLoc->Release();
     pEnumerator->Release();
-    CoUninitialize();
+    return result;   // Program successfully completed.
+}
+
+std::unordered_multimap<std::wstring, std::wstring> WmiHelper::queryKeyValWMI(const char* query, LPCWSTR asKey, LPCWSTR asValue)
+{
+    HRESULT hres;
+    std::unordered_multimap<std::wstring, std::wstring> result;
+
+    // Step 6: --------------------------------------------------
+    // Use the IWbemServices pointer to make requests of WMI ----
+
+    // For example, get the name of the operating system
+    IEnumWbemClassObject* pEnumerator = NULL;
+    hres = _pSvc->ExecQuery(
+        bstr_t("WQL"),
+        bstr_t(query),
+        WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
+        NULL,
+        &pEnumerator);
+
+    if (FAILED(hres))
+    {
+        std::cout << "Query for operating system name failed."
+            << " Error code = 0x"
+            << std::hex << hres << std::endl;
+        return result;               // Program has failed.
+    }
+
+    // Step 7: -------------------------------------------------
+    // Get the data from the query in step 6 -------------------
+
+    IWbemClassObject* pclsObj = NULL;
+    ULONG uReturn = 0;
+
+    while (pEnumerator)
+    {
+        HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1,
+            &pclsObj, &uReturn);
+
+        if (0 == uReturn || hr != S_OK)
+        {
+            break;
+        }
+
+        VARIANT vtPropKey;
+        VARIANT vtPropVal;
+
+        VariantInit(&vtPropKey);
+        VariantInit(&vtPropVal);
+        // Get the value of the Name property
+        HRESULT hrKey = pclsObj->Get(asKey, 0, &vtPropKey, 0, 0);
+        HRESULT hrVal = pclsObj->Get(asKey, 0, &vtPropVal, 0, 0);
+
+        // Not 100% sure but when cVal is '\x1' it crash :V
+        if (hrKey == S_OK && hrVal == S_OK &&
+            vtPropKey.bstrVal != nullptr && vtPropKey.cVal != '\x1' &&
+            vtPropVal.bstrVal != nullptr && vtPropVal.cVal != '\x1')
+            result.insert({ vtPropKey.bstrVal, vtPropVal.bstrVal });
+
+        VariantClear(&vtPropKey);
+        VariantClear(&vtPropVal);
+
+        pclsObj->Release();
+    }
+    pEnumerator->Release();
 
     return result;   // Program successfully completed.
 }
