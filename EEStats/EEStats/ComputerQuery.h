@@ -13,30 +13,34 @@ class ComputerQuery
 	// TODO: Maybe cache those info or cache the infos
 
 public:
+	ComputerQuery::ComputerQuery();
+
 	// Memory
-	DWORDLONG getRAM();
-	std::string getSimpleRAM(bool gonly = false);
+	float getRAM();
+	std::string extremRound(double val);
 
 	// GPU
 	std::string getGraphicVendorId();
 	std::string getGraphicDeviceId();
 	std::string getGraphicName();
 	std::string getGraphicVersion();
-	std::string getGraphicCurrentRefreshRate();
+	uint32_t getGraphicCurrentRefreshRate();
 	// std::string getGraphicMaxRefreshRate();
-	std::string getGraphicCurrentBitsPerPixel();
-	std::string getGraphicDedicatedMemory();
+	uint32_t getGraphicCurrentBitsPerPixel();
+	float getGraphicDedicatedMemory();
 	
 	// CPU
 	std::string getProcessorId();
 	std::string getProcessorName();
-	std::string getProcessorNumberOfCores();
-	std::string getProcessorLoadPercentage();
+	std::string getProcessorArch();
+	uint32_t getProcessorNumberOfCores();
+	uint16_t getProcessorLoadPercentage();
 	std::string getProcessorCurrentCorePercentage();
 
 	// DX
 	int getDirectX_MajorVersion();
 	std::string getDirectX_WrapperVersion();
+	std::string getDirectX_WrapperParams();
 
 	// Screen
 	SIZE getWindowsResolution();
@@ -68,11 +72,13 @@ public:
 	typedef enum WindowsVersion {
 		Win11, Win10, Win8, Win8_1, Win7, WinVista, WinXP, WinUnknown
 	} WindowsVersion;
-	
-	WindowsVersion getWindowsVersion();
+
+	WindowsVersion getWindowsVersionCQ();
+	std::string getWindowsVersion();
+	std::string getWindowsName();
 
 private:
 	std::unique_ptr<WmiHelper> _wmiHelper = std::make_unique<WmiHelper>();
-
+	std::string _bestGraphicPNPDeviceID;
 };
 

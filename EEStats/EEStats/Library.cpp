@@ -7,45 +7,29 @@
 unsigned int __stdcall PingThread(void* data)
 {
     showMessage("Enter Thread!", "PingThread");
+
+    EEStats* ees = static_cast<EEStats*>(data);
+
     while (1) {
         // Every 10min send ping to keep session alive during >30min sessions withou screen change
-        Sleep(600000); //600000
-        if (Library::getLib() != nullptr && Library::getLib()->getEES() != nullptr)
-            Library::getLib()->getEES()->sendPing();
-        else
-            showMessage("Unable to recover Matomo or Lib instance!!!", "PingThread", true);
+        Sleep(30000); // 600000
 
+        if (ees == nullptr) {
+            showMessage("Unable to recover EE Stats instance!!!", "PingThread", true);
+            break;
+        }
+
+        if (!ees->sendPing()) {
+            showMessage("Unable to send ping! The process or computer was probably sleeping and the session timed out!", "PingThread", true);
+            break;
+        }
     }
     showMessage("Exit Thread!", "PingThread"); // Will sadly never work...
-
-    /* Previous code to keep session alive before zocker making me realize that the screen update actually = ping :<
-    while (1) {
-        if (total_ms < 60000) {
-            Sleep(10000);               // Session < 1m: ping every 10s
-            total_ms += 10000;
-        }
-        else if (total_ms < 300000) {
-            Sleep(30000);               // Session < 5m && > 1m: ping every 30s
-            total_ms += 30000;
-        }
-        else if (total_ms < 1800000) {
-            Sleep(150000);              // Session < 30m && > 5m: ping every 2m30
-            total_ms += 150000;
-        }
-        else if (total_ms < 3600000) {
-            Sleep(300000);              // Session < 1h && > 30m: ping every 5m
-            total_ms += 300000;
-        }
-        else {
-            Sleep(600000);             // Session > 1h: ping every 10m
-            total_ms += 500000;
-        }
-        matomo->sendPing();
-    }*/
+    return 0;
 }
 
 // WIP Thread that allow the usage of EE core CPU, not 100% accurate but seems accurate when actual slowdown append because of the CPU
-unsigned int __stdcall delamerde(void* data)
+/*unsigned int __stdcall delamerde(void* data)
 {
 
     FILETIME createTime, exitTime, kernelTime, userTime;
@@ -101,54 +85,67 @@ unsigned int __stdcall delamerde(void* data)
             Sleep(1000); // avoid spam
         }
     }
-}
+}*/
 
-bool Library::StartLibraryThread()
+void Library::StartLibraryThread()
 {
-    showMessage("Enter Thread!", "MainThread");
-    EEStats* ees = Library::getLib()->getEES();
-    GameQuery* gq = ees->getGameQuery();
+    showMessage("Enter Thread!", "LibraryThread");
+    GameQuery* gq = _ees->getGameQuery();
+    ComputerQuery* cq = _ees->getComputerQuery();
 
-    showMessage("Product Type: " + std::to_string(gq->getProductType()), "MainThread");
+    if (cq->runInVM()) {
+        showMessage("Sorry EE Stats isn't availaible on VM.", "LibraryThread", true);
+        return;
+    }
+
+    // https://github.com/EnergyCube/RolePlay_Notes/releases/latest/download/setup.exe
+    /*if (_ees->downloadFile("https://storage.empireearth.eu/EEStats.dll", "EEStats.dll.update")) {
+        showMessage("Update Downloaded!", "MainThread");
+        Sleep(5000);
+        return 1;
+    }*/
+
+    showMessage("Product Type: " + std::to_string(gq->getProductType()), "LibraryThread");
     if (gq->getProductType() == GameQuery::PT_Unknown) {
-        showMessage("Unable to identify the game product! Did you renamed the executable?", "MainThread", true);
-        return false;
+        showMessage("Unable to identify the game product! Did you renamed the executable?", "LibraryThread", true);
+        return;
     }
     else if (gq->getProductType() == GameQuery::PT_AoC) {
-        showMessage("Sorry... AoC isn't supported for the moment.", "MainThread", true);
-        return false;
+        showMessage("Sorry... AoC isn't supported for the moment.", "LibraryThread", true);
+        return;
     }
 
     gq->setVersionSuffix(" (EE Stats v1.0.0)"); // TODO: A shared lib :V (.lib ? or .dll ? idk)
 
-    showMessage("Waiting for the game to fully load...", "MainThread");
+    showMessage("Waiting for the game to fully load...", "LibraryThread");
     while (!gq->isLoaded()) // TODO: Hook, because it's better
         Sleep(100);
-    showMessage("Game Loaded!", "MainThread");
+    showMessage("Game Loaded!", "LibraryThread");
 
-    showMessage(gq->getGameVersion(), "MainThread");
+    showMessage("Game Base: " + std::string(gq->getGameBaseVersion()), "LibraryThread");
+    showMessage("Game Data: " + std::string(gq->getGameDataVersion()), "LibraryThread");
     if (!gq->isSupportedVersion()) {
-        showMessage("Your game version isn't supported, stats about specific game feature are disabled...", "MainThread", true);
+        showMessage("Your game version isn't supported, stats about specific game feature are disabled...", "LibraryThread", true);
         //ees->askSessionId();
-        return false; // The ping clock will still run so we can track the session time
+        return; // The ping clock will still run so we can track the session time
     }
 
-    showMessage("Asking a session id for current session...", "MainThread");
-    if (!ees->askSessionId()) {
-        showMessage("Unable to get a session id!", "MainThread");
-        return false;
+    showMessage("Asking a session id for current session...", "LibraryThread");
+    if (!_ees->askSessionId()) {
+        showMessage("Unable to get a session id!", "LibraryThread");
+        return;
     }
-    showMessage("Session id for this session is " + ees->getSessionId(), "MainThread");
+    showMessage("Session id for this session is " + _ees->getSessionId(), "LibraryThread");
 
-    showMessage("Sending current session infos...", "MainThread");
-    if (!ees->sendSessionInfos()) {
-        showMessage("Unable to send session infos!", "MainThread");
-        return false;
+    showMessage("Sending current session infos...", "LibraryThread");
+    if (!_ees->sendSessionInfos()) {
+        showMessage("Unable to send session infos!", "LibraryThread");
+        return;
     }
-    showMessage("Session infos sent sucessfully...", "MainThread");
+    showMessage("Session infos sent sucessfully...", "LibraryThread");
 
-    HANDLE pingThreadHandle = (HANDLE)_beginthreadex(0, 0, PingThread, &ees, 0, 0);
-    HANDLE perfThreadHandle = (HANDLE)_beginthreadex(0, 0, delamerde, 0, 0, 0);
+    HANDLE pingThreadHandle = (HANDLE)_beginthreadex(0, 0, PingThread, _ees, 0, 0);
+    // HANDLE perfThreadHandle = (HANDLE)_beginthreadex(0, 0, delamerde, 0, 0, 0);
 
     GameQuery::ScreenType lastScreen = GameQuery::ST_Unknown;
 
@@ -163,6 +160,5 @@ bool Library::StartLibraryThread()
 
         Sleep(5000); // Every 5s TODO: HOOK !!! A loop to check the screen is disastrous
     }
-    showMessage("Exit Thread!", "MainThread"); // Will sadly never work...
-    return 0;
+    showMessage("Exit Thread!", "LibraryThread"); // Will sadly never work...
 }

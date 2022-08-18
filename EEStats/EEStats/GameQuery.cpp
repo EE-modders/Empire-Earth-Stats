@@ -20,9 +20,6 @@ GameQuery::GameQuery()
 
     ToUpper(exeFileName);
 
-    std::wcout << szExeFileName << std::endl;
-    std::cout << exeFileName << std::endl;
-
     _productType = PT_Unknown;
     if (exeFileName.compare("EMPIRE EARTH.EXE") == 0)
         _productType = PT_EE;
@@ -159,16 +156,38 @@ GameQuery::ScreenType GameQuery::getCurrentScreen()
         return ST_Menu;
 }
 
-char* GameQuery::getGameVersion()
+char* GameQuery::getGameBaseVersion()
 {
-    return (char*)calcAddress(0x4A9030);
+    if (_productType == PT_EE)
+        return (char*)calcAddress(0x04A9030);
+    if (_productType == PT_AoC)
+        return (char*)calcAddress(0x04BF570);
+    return "";
+}
+
+char* GameQuery::getGameDataVersion()
+{
+    memoryPTR memEEC { 0x0513264, { 0x0 } };
+    memoryPTR memAOC { 0x0529A0C, { 0x0 } };
+    
+
+    if (_productType == PT_EE)
+        return (char*)tracePointer(&memEEC);
+    if (_productType == PT_AoC)
+        return (char*)tracePointer(&memAOC);
+    return "";
 }
 
 bool GameQuery::isSupportedVersion() {
-    const char* supported = "2002.09.12.v2.00";
-    const char* current = getGameVersion();
+    const char* supportedEEC = "2002.09.12.v2.00";
+    const char* supportedAOC = "2002.8.17.v1.00";
+    const char* current = getGameBaseVersion();
 
-    return strcmp(supported, current) == 0;
+    if (_productType == PT_EE)
+        return strcmp(supportedEEC, current) == 0;
+    if (_productType == PT_AoC)
+        return strcmp(supportedAOC, current) == 0;
+    return false;
 }
 
 std::string newVersionStrCpp;
@@ -226,7 +245,6 @@ GameQuery::ProductType GameQuery::getProductType()
 {
     return _productType;
 }
-
 
 std::string GameQuery::getWONProductName()
 {

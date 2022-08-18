@@ -34,6 +34,8 @@ public:
 
 	bool askSessionId();
 	bool sendSessionInfos();
+	// Keep the session open for session time, need to be send after at least one other query
+	bool sendPing();
 
 	bool isReachable();
 	bool isUpToDate();
@@ -41,8 +43,6 @@ public:
 
 	void sendScreen(GameQuery::ScreenType screen_type);
 
-	// Keep the session open for session time, need to be send after at least one other query
-	void sendPing();
 
 	std::string getSessionId();
 
@@ -58,6 +58,8 @@ public:
 		return _gq.get();
 	}
 
+	bool downloadFile(std::string path, std::string file);
+
 private:
 	std::string _base_url;
 	std::string _session_id;
@@ -66,7 +68,8 @@ private:
 	std::unique_ptr<ComputerQuery> _cq = std::make_unique<ComputerQuery>();
 	std::unique_ptr<GameQuery> _gq = std::make_unique<GameQuery>();
 
-	std::pair<CURLcode, std::pair<long, std::string>> sendRequest(std::string path, std::string post = "");
+
+	std::pair<bool, std::pair<long, std::string>> sendRequest(std::string path, std::string request_type, std::string params = "");
 	std::string buildUserAgent(struct curl_slist*& headers);
 };
 

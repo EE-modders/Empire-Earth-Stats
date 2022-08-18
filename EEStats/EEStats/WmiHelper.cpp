@@ -4,6 +4,7 @@
 
 #include <comdef.h>
 #include <iostream>
+#include <string>
 
 #pragma comment(lib, "wbemuuid.lib")
 
@@ -184,11 +185,13 @@ std::vector<std::wstring> WmiHelper::queryWMI(const char* query, LPCWSTR value)
 
         // Get the value of the Name property
         hr = pclsObj->Get(value, 0, &vtProp, 0, 0);
-        if (hr == S_OK && vtProp.bstrVal != nullptr && vtProp.cVal != '\x1') // Not 100% sure but when cVal is '\x1' it crash :V
+        if (hr == S_OK && vtProp.vt == VT_BSTR && vtProp.bstrVal != nullptr)
             result.push_back(vtProp.bstrVal);
-
+        if (hr == S_OK && vtProp.vt == VT_I4)
+            result.push_back(std::to_wstring(vtProp.uintVal));
+        
         VariantClear(&vtProp);
-
+        
         pclsObj->Release();
     }
     pEnumerator->Release();
@@ -243,13 +246,20 @@ std::unordered_multimap<std::wstring, std::wstring> WmiHelper::queryKeyValWMI(co
         VariantInit(&vtPropVal);
         // Get the value of the Name property
         HRESULT hrKey = pclsObj->Get(asKey, 0, &vtPropKey, 0, 0);
-        HRESULT hrVal = pclsObj->Get(asKey, 0, &vtPropVal, 0, 0);
+        HRESULT hrVal = pclsObj->Get(asValue, 0, &vtPropVal, 0, 0);
 
-        // Not 100% sure but when cVal is '\x1' it crash :V
-        if (hrKey == S_OK && hrVal == S_OK &&
-            vtPropKey.bstrVal != nullptr && vtPropKey.cVal != '\x1' &&
-            vtPropVal.bstrVal != nullptr && vtPropVal.cVal != '\x1')
-            result.insert({ vtPropKey.bstrVal, vtPropVal.bstrVal });
+        std::wstring key, value;
+        if (hrKey == S_OK && vtPropKey.vt == VT_BSTR && vtPropKey.bstrVal != nullptr)
+            key = vtPropKey.bstrVal;
+        if (hr == S_OK && vtPropKey.vt == VT_I4)
+            key = std::to_wstring(vtPropKey.lVal);
+
+        if (hrKey == S_OK && vtPropVal.vt == VT_BSTR && vtPropVal.bstrVal != nullptr)
+            value = vtPropVal.bstrVal;
+        if (hr == S_OK && vtPropVal.vt == VT_I4)
+            value = std::to_wstring(vtPropVal.lVal);
+
+        result.insert({ key, value });
 
         VariantClear(&vtPropKey);
         VariantClear(&vtPropVal);

@@ -8,40 +8,57 @@
 #include <iostream>
 #include <thread>
 
-bool __stdcall Attach(void)
+static Library* lib = nullptr;
+
+bool __stdcall Attach(HMODULE hModule)
 {
-    DWORD Current_Game_ProcessID = GetCurrentProcessId();
-    std::wstring MutexString = L"EEStatsMutex_" + std::to_wstring(Current_Game_ProcessID);
-    HANDLE handleMutex = CreateMutexW(NULL, TRUE, MutexString.c_str());
 
-    if (GetLastError() == ERROR_ALREADY_EXISTS) {
-        return false;
-    }
-
+#ifdef _DEBUG
     if (!GetConsoleWindow()) // Already Allocated
         AllocConsole();
-    FILE* f;
     freopen_s(&f, "CONOUT$", "w", stdout);
-    freopen_s(&f, "CONOUT$", "w", stderr);
+#else
+    FILE* f;
+    // WARN: cURL verbose need to be DISABLED !
+    //       Or the curl_easy_perform() will crash...
+    //       I have no idea of how to fix that :|
+    freopen_s(&f, "EEStats.log", "a", stdout);
+#endif // DEBUG
+
 
     showMessage("Attach!", "DllMain");
 
-    auto initLamda = [](void*) -> unsigned int __stdcall
+    showMessage("Init Library...", "DllMain");
+
+    if (lib) {
+        showMessage("Library Already Initialized...", "DllMain");
+        return false;
+    }
+
+    auto initLamda = [](void* data) -> unsigned int __stdcall
     {
-        if (Library::InitLibrary())
-            Library::getLib()->StartLibraryThread();
+        HMODULE* si = static_cast<HMODULE *>(data);
+        lib = new Library(*si);
+        showMessage("Library Initialized!", "DllMain");
+        lib->PrintCredits();
+        lib->UpdateAttachRoutine();
+        lib->StartLibraryThread();
         return 0;
     };
 
-    HANDLE initThreadHandle = (HANDLE)_beginthreadex(0, 0, initLamda, 0, 0, 0);
+    showMessage("Starting Library Thread!", "DllMain");
+    HANDLE initThreadHandle = (HANDLE)_beginthreadex(0, 0, initLamda, &hModule, 0, 0);
+
     return true;
 }
 
 // Be really REALLY fast here, the game don't fk care if it take more than <random time...> it just kill it
-bool __stdcall Detach(void)
+bool __stdcall Detach()
 {
     showMessage("Detach!", "DllMain");
-    if (Library::DestroyLibrary()) {
+    if (lib != nullptr) {
+        lib->UpdateDetachRoutine();
+        delete lib;
         if (GetConsoleWindow())
             FreeConsole();
 #ifdef _DEBUG
@@ -60,7 +77,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     switch (ul_reason_for_call)
     {
         case DLL_PROCESS_ATTACH: {
-            return Attach();
+            return Attach(hModule);
         }
         case DLL_THREAD_ATTACH:
             break;

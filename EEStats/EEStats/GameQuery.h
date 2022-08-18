@@ -34,7 +34,8 @@ public:
 	
 	ScreenType getCurrentScreen();
 
-	char* getGameVersion();
+	char* getGameBaseVersion();
+	char* getGameDataVersion();
 	bool isSupportedVersion();
 
 	void setVersionSuffix(std::string suffix);

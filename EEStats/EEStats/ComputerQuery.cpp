@@ -7,38 +7,40 @@
 #include <iostream>
 #include <codecvt>
 
-DWORDLONG ComputerQuery::getRAM()
+ComputerQuery::ComputerQuery()
+{
+    _bestGraphicPNPDeviceID = "";
+    auto queryResult = _wmiHelper->queryKeyValWMI("SELECT PNPDeviceID,AdapterRAM FROM Win32_VideoController", L"PNPDeviceID", L"AdapterRAM");
+
+    if (!queryResult.empty()) {
+        std::pair<std::wstring, uint32_t> best = { L"", 0 };
+
+        for (auto iter = queryResult.begin(); iter != queryResult.end(); ++iter)
+        {
+            if (iter->second.empty())
+                continue;
+            uint32_t val = std::atoi(utf16ToUtf8(iter->second).c_str());
+            if (val > best.second)
+                best = { iter->first, val };
+        }
+        _bestGraphicPNPDeviceID = utf16ToUtf8(best.first);
+        // WMI sh$t that make me loose 8h just because the fk string require \\ and not \ for a fk simple WHERE string cmp ?!
+        replaceAll(_bestGraphicPNPDeviceID, "\\", "\\\\");
+    }
+}
+
+float ComputerQuery::getRAM()
 {
     MEMORYSTATUSEX status;
     status.dwLength = sizeof(status);
     GlobalMemoryStatusEx(&status);
-    return status.ullTotalPhys;
-}
-
-std::string ComputerQuery::getSimpleRAM(bool gonly)
-{
-
-    long double ram_ko = (long double) getRAM();
-
-    if (ram_ko == 0) // prevent div 0 and the explosion of the universe
-        return "0";
-
-    long double ram_mo = ram_ko / 1024 / 1024 / 1024;
-
-    std::string simple = std::to_string(ram_mo);
-    simple = simple.substr(0, simple.find(".") + 2);
-
-    if (simple.at(simple.length() - 1) == '0' || gonly) {
-        return simple.substr(0, simple.length() - 2);
-    }
-    return simple;
+    return ((float)status.ullTotalPhys) / 1024 / 1024 / 1024;
 }
 
 std::string ComputerQuery::getGraphicVendorId()
 {
-    std::wstring fullpath = _wmiHelper->queryWMI("SELECT PNPDeviceID FROM Win32_VideoController", L"PNPDeviceID").at(0);
-
-    std::wstring pre_identifier = L"VEN_";
+    std::string fullpath = _bestGraphicPNPDeviceID;
+    std::string pre_identifier = "VEN_";
 
     size_t index = fullpath.find(pre_identifier, 0);
     if (index == std::wstring::npos)
@@ -46,19 +48,16 @@ std::string ComputerQuery::getGraphicVendorId()
     if (index + pre_identifier.length() + 4 >= fullpath.length())
         return ""; // Not enough space
     fullpath = fullpath.substr(index + pre_identifier.length(), 4);
-    if (fullpath.find(L"&") != std::wstring::npos || fullpath.find(L";") != std::wstring::npos ||
-        fullpath.find(L"_") != std::wstring::npos || fullpath.find(L"0000") != std::wstring::npos)
+    if (fullpath.find("&") != std::wstring::npos || fullpath.find(";") != std::wstring::npos ||
+        fullpath.find("_") != std::wstring::npos || fullpath.find("0000") != std::wstring::npos)
         return ""; // Invalid data
-
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-    return conv.to_bytes(fullpath);
+    return fullpath;
 }
 
 std::string ComputerQuery::getGraphicDeviceId()
 {
-    std::wstring fullpath = _wmiHelper->queryWMI("SELECT PNPDeviceID FROM Win32_VideoController", L"PNPDeviceID").at(0);
-
-    std::wstring pre_identifier = L"DEV_";
+    std::string fullpath = _bestGraphicPNPDeviceID;
+    std::string pre_identifier = "DEV_";
 
     size_t index = fullpath.find(pre_identifier, 0);
     if (index == std::wstring::npos)
@@ -66,74 +65,137 @@ std::string ComputerQuery::getGraphicDeviceId()
     if (index + pre_identifier.length() + 4 >= fullpath.length())
         return ""; // Not enough space
     fullpath = fullpath.substr(index + pre_identifier.length(), 4);
-    if (fullpath.find(L"&") != std::wstring::npos || fullpath.find(L";") != std::wstring::npos ||
-        fullpath.find(L"_") != std::wstring::npos || fullpath.find(L"0000") != std::wstring::npos)
+    if (fullpath.find("&") != std::wstring::npos || fullpath.find(";") != std::wstring::npos ||
+        fullpath.find("_") != std::wstring::npos || fullpath.find("0000") != std::wstring::npos)
         return ""; // Invalid data
-
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-    return conv.to_bytes(fullpath);
+    return fullpath;
 }
 
 // Never use the GPU name as identifier since vendor may change it for no reasons over time
 std::string ComputerQuery::getGraphicName()
 {
-    std::wstring name = _wmiHelper->queryWMI("SELECT Name FROM Win32_VideoController", L"Name").at(0);
-
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-    return conv.to_bytes(name);
+    auto queryResult = _wmiHelper->queryWMI(("SELECT Name FROM Win32_VideoController WHERE PNPDeviceID=\"" + _bestGraphicPNPDeviceID + "\"").c_str(), L"Name");
+    
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return "";
+    return utf16ToUtf8(queryResult.at(0));
 }
 
 std::string ComputerQuery::getGraphicVersion()
 {
-    std::wstring name = _wmiHelper->queryWMI("SELECT DriverVersion FROM Win32_VideoController", L"DriverVersion").at(0);
+    auto queryResult = _wmiHelper->queryWMI(("SELECT DriverVersion FROM Win32_VideoController WHERE PNPDeviceID=\"" + _bestGraphicPNPDeviceID + "\"").c_str(), L"DriverVersion");
 
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-    return conv.to_bytes(name);
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return "";
+    return utf16ToUtf8(queryResult.at(0));
 }
 
-std::string ComputerQuery::getGraphicCurrentRefreshRate()
+uint32_t ComputerQuery::getGraphicCurrentRefreshRate()
 {
-    std::wstring name = _wmiHelper->queryWMI("SELECT CurrentRefreshRate FROM Win32_VideoController", L"CurrentRefreshRate").at(0);
-
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-    return conv.to_bytes(name);
+    auto queryResult = _wmiHelper->queryWMI(("SELECT CurrentRefreshRate FROM Win32_VideoController WHERE PNPDeviceID=\"" + _bestGraphicPNPDeviceID + "\"").c_str(), L"CurrentRefreshRate");
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return 0;
+    return std::atoi(utf16ToUtf8(queryResult.at(0)).c_str());
 }
 
-std::string ComputerQuery::getGraphicCurrentBitsPerPixel()
+uint32_t ComputerQuery::getGraphicCurrentBitsPerPixel()
 {
-    std::wstring name = _wmiHelper->queryWMI("SELECT CurrentBitsPerPixel FROM Win32_VideoController", L"CurrentBitsPerPixel").at(0);
-
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-    return conv.to_bytes(name);
+    auto queryResult = _wmiHelper->queryWMI(("SELECT CurrentBitsPerPixel FROM Win32_VideoController WHERE PNPDeviceID=\"" + _bestGraphicPNPDeviceID + "\"").c_str(), L"CurrentBitsPerPixel");
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return 0;
+    return std::atoi(utf16ToUtf8(queryResult.at(0)).c_str());
 }
 
-std::string ComputerQuery::getGraphicDedicatedMemory()
+float ComputerQuery::getGraphicDedicatedMemory()
 {
-    std::wstring name = _wmiHelper->queryWMI("SELECT AdapterRAM FROM Win32_VideoController", L"AdapterRAM").at(0);
+    auto queryResult = _wmiHelper->queryWMI(("SELECT AdapterRAM FROM Win32_VideoController WHERE PNPDeviceID=\"" + _bestGraphicPNPDeviceID + "\"").c_str(), L"AdapterRAM");
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return 0;
+    float result = (float) std::stoull(utf16ToUtf8(queryResult.at(0)).c_str());
+    if (result == 0)
+        return 0;
+    return result / 1024 / 1024 / 1024;
+}
 
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-    return conv.to_bytes(name);
+std::string ComputerQuery::getProcessorId()
+{
+    auto queryResult = _wmiHelper->queryWMI("SELECT ProcessorId FROM Win32_Processor", L"ProcessorId");
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return "";
+    return utf16ToUtf8(queryResult.at(0));
+}
+
+std::string ComputerQuery::getProcessorName()
+{
+    auto queryResult = _wmiHelper->queryWMI("SELECT Name FROM Win32_Processor", L"Name");
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return "";
+    return utf16ToUtf8(queryResult.at(0));
+}
+
+std::string ComputerQuery::getProcessorArch()
+{
+    SYSTEM_INFO systemInfo;
+    GetNativeSystemInfo(&systemInfo);
+
+    switch (systemInfo.wProcessorArchitecture)
+    {
+    case PROCESSOR_ARCHITECTURE_AMD64:
+        return "x64";
+    case PROCESSOR_ARCHITECTURE_INTEL:
+        return "x86";
+        break;
+    case PROCESSOR_ARCHITECTURE_ARM:
+        return "ARM";
+    case 12 /*PROCESSOR_ARCHITECTURE_ARM64*/:
+        return "ARM64";
+    default:
+        return "";
+    }
+}
+
+uint32_t ComputerQuery::getProcessorNumberOfCores()
+{
+    auto queryResult = _wmiHelper->queryWMI("SELECT NumberOfCores FROM Win32_Processor", L"NumberOfCores");
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return 0;
+    return std::atoi(utf16ToUtf8(queryResult.at(0)).c_str());
+}
+
+uint16_t ComputerQuery::getProcessorLoadPercentage()
+{
+    auto queryResult = _wmiHelper->queryWMI("SELECT LoadPercentage FROM Win32_Processor", L"LoadPercentage");
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return 0;
+    return std::atoi(utf16ToUtf8(queryResult.at(0)).c_str());
+}
+
+std::string ComputerQuery::getProcessorCurrentCorePercentage()
+{
+    return "";
 }
 
 int ComputerQuery::getDirectX_MajorVersion()
 {
-    switch (getWindowsVersion()) {
-    case Win10:
-    case Win11:
-        return 12;
-    case Win8_1:
-    case Win8:
-    case Win7:
-        return 11;
-    case WinVista:
-        //std::wstring a = queryWMI("SELECT HotFixID FROM Win32_QuickFixEngineering", L"HotFixID");
-        // WMI Querry don't support list currently !
-        // TODO: detect that sh$t
-        return 10; // KB 971644 - 11 !
-    case WinXP:
-        return 9;
-    default:
-        return 0;
+    switch (getWindowsVersionCQ()) {
+        case Win10:
+        case Win11:
+            return 12;
+        case Win8_1:
+        case Win8:
+        case Win7:
+            return 11;
+        case WinVista: {
+            auto updIds = _wmiHelper->queryWMI("SELECT HotFixID FROM Win32_QuickFixEngineering", L"HotFixID");
+            for (auto iter = updIds.begin(); iter != updIds.end();)
+                if (iter->compare(L"KB971644") == 0) // Nice one MS
+                    return 11;
+            return 10;
+        }
+        case WinXP:
+            return 9;
+        default:
+            return 0;
     }
 }
 
@@ -142,43 +204,49 @@ std::string ComputerQuery::getDirectX_WrapperVersion()
     if (doesFileExist(L"DDraw.dll")) {
         if (doesFileExist(L"dgVoodoo.conf")) {
             wchar_t txt[255];
-            DWORD cpy = GetPrivateProfileString(L"General", L"OutputAPI", NULL, txt, 255, L"dgVoodoo.conf");
-            if (txt == L"" || cpy == 0)
-                return "?";
+            DWORD cpy = GetPrivateProfileString(L"General", L"OutputAPI", NULL, txt, 255, L"./dgVoodoo.conf");
+            if (txt == L"" && cpy != 0 && GetLastError() != ERROR_FILE_NOT_FOUND)
+                return "";
             std::wstring ws(txt);
             return utf16ToUtf8(ws);;
         }
         return "d3d9";
     }
-    return "native";
+    return "";
 }
 
-std::string getDirectX_WrapperParams()
+std::string ComputerQuery::getDirectX_WrapperParams()
 {
     if (doesFileExist(L"DDraw.dll") && doesFileExist(L"dgVoodoo.conf")) {
-        wchar_t version[255], fullScreenMode[255], disableAltEnterToToggleScreenMode[255], windowedAttributes[255];
+        // Don't remove the "./" (I debugged a fk hour because I didn't added it...)
+        const LPCWSTR dgVoodooConf = L"./dgVoodoo.conf";
+        const int maxValLen = 256;
+        wchar_t version[maxValLen], fullScreenMode[maxValLen], disAltEntToTogScrMd[maxValLen], windowedAttributes[maxValLen];
 
-        DWORD versionCpy = GetPrivateProfileString(NULL, L"Version", NULL, version, 255, L"dgVoodoo.conf");
-        DWORD fullScreenModeCpy = GetPrivateProfileString(L"General", L"FullScreenMode", NULL, fullScreenMode, 255, L"dgVoodoo.conf");
-        DWORD disableAltEnterToToggleScreenModeCpy = GetPrivateProfileString(L"DirectX", L"DisableAltEnterToToggleScreenMode", NULL, disableAltEnterToToggleScreenMode, 255, L"dgVoodoo.conf");
-        DWORD windowedAttributesCpy = GetPrivateProfileString(L"GeneralExt", L"WindowedAttributes", NULL, windowedAttributes, 255, L"dgVoodoo.conf");
+
+        GetPrivateProfileString(L"", L"Version", NULL, version, maxValLen, dgVoodooConf);
+        GetPrivateProfileString(L"General", L"FullScreenMode", NULL, fullScreenMode, maxValLen, dgVoodooConf);
+        GetPrivateProfileString(L"DirectX", L"DisableAltEnterToToggleScreenMode", NULL, disAltEntToTogScrMd, maxValLen, dgVoodooConf);
+        GetPrivateProfileString(L"GeneralExt", L"WindowedAttributes", NULL, windowedAttributes, maxValLen, dgVoodooConf);
 
         std::wstringstream wss;
-        if (version != L"" || versionCpy != 0)
+        if (wcslen(version) != 0)
             wss << L"Version=" << version << ";";
-        if (fullScreenMode != L"" || fullScreenModeCpy != 0)
+        if (wcslen(fullScreenMode) != 0)
             wss << L"FullScreenMode=" << fullScreenMode << ";";
-        if (disableAltEnterToToggleScreenMode != L"" || disableAltEnterToToggleScreenModeCpy != 0)
-            wss << L"DisableAltEnterToToggleScreenMode=" << disableAltEnterToToggleScreenMode << ";";
-        if (windowedAttributes != L"" || windowedAttributesCpy != 0)
+        if (wcslen(disAltEntToTogScrMd) != 0)
+            wss << L"DisableAltEnterToToggleScreenMode=" << disAltEntToTogScrMd << ";";
+        if (wcslen(windowedAttributes))
             wss << L"WindowedAttributes=" << windowedAttributes << ";";
 
-        std::wstring ws(version);
+        std::wstring ws = wss.str();
         if (ws.empty())
             return "";
+        if (ws.at(ws.length() - 1) == ';')
+            ws = ws.substr(0, ws.length() - 1);
         return utf16ToUtf8(ws);;
     }
-    return "native";
+    return "";
 }
 
 SIZE ComputerQuery::getWindowsResolution()
@@ -218,9 +286,16 @@ std::string ComputerQuery::getWindowsLocale()
     locale += L"-";
     locale += country;
 
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-    return conv.to_bytes(locale);
+    return utf16ToUtf8(locale);
 
+}
+
+std::string ComputerQuery::getWindowsName()
+{
+    auto queryResult = _wmiHelper->queryWMI("SELECT Caption FROM Win32_OperatingSystem", L"Caption");
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return "";
+    return utf16ToUtf8(queryResult.at(0));
 }
 
 bool ComputerQuery::isWine()
@@ -244,31 +319,39 @@ const char* ComputerQuery::getWineVersion()
     return NULL;
 }
 
-ComputerQuery::WindowsVersion ComputerQuery::getWindowsVersion()
+std::string ComputerQuery::getWindowsVersion()
 {
-    std::wstring version_wmi = _wmiHelper->queryWMI("SELECT Version FROM Win32_OperatingSystem", L"Version").at(0);
+    auto queryResult = _wmiHelper->queryWMI("SELECT Version FROM Win32_OperatingSystem", L"Version");
+    if (queryResult.empty() || queryResult.at(0).empty())
+        return "";
+    return utf16ToUtf8(queryResult.at(0));
+}
+
+ComputerQuery::WindowsVersion ComputerQuery::getWindowsVersionCQ()
+{
+    auto version_wmi = getWindowsVersion();
 
     if (version_wmi.empty()) {
-        std::cout << "Unable to recover version from WMI !" << std::endl;
+        showMessage("Unable to recover version from WMI !", "ComputerQuery", 1);
         return WinUnknown;
     }
 
-    if (version_wmi.find_first_of(L"10.") == 0) {
+    if (version_wmi.find_first_of("10.") == 0) {
         std::wstring version_wmi = _wmiHelper->queryWMI("SELECT BuildNumber FROM Win32_OperatingSystem", L"BuildNumber").at(0);
         if (!version_wmi.empty() && std::stoi(version_wmi) >= 22000) // this is a real disaster
             return Win11;
         return Win10;
     }
-    if (version_wmi.find_first_of(L"6.3" == 0))
+    if (version_wmi.find_first_of("6.3" == 0))
         return Win8_1;
-    if (version_wmi.find_first_of(L"6.2" == 0))
+    if (version_wmi.find_first_of("6.2" == 0))
         return Win8;
-    if (version_wmi.find_first_of(L"6.1" == 0))
+    if (version_wmi.find_first_of("6.1" == 0))
         return Win7;
-    if (version_wmi.find_first_of(L"6.0" == 0))
+    if (version_wmi.find_first_of("6.0" == 0))
         return WinVista;
-    if (version_wmi.find_first_of(L"5.1" == 0) || version_wmi.find_first_of(L"5.2" == 0))
+    if (version_wmi.find_first_of("5.1" == 0) || version_wmi.find_first_of("5.2" == 0))
         return WinXP;
-    std::cout << "Unable to detect Windows version !" << std::endl;
+    showMessage("Unable to detect Windows version !", "ComputerQuery", 1);
     return WinUnknown;
 }

@@ -32,13 +32,13 @@ static void showMessage(std::string msg, std::string scope = "", bool error = fa
     if (show_time) {
         struct tm newtime;
         __time64_t long_time;
-        char buffer[80];
+        char buffer[256];
         errno_t err;
 
         time(&long_time);
         err = localtime_s(&newtime, &long_time);
         if (!err) {
-            strftime(buffer, 80, "[%H:%M:%S | %d/%m/%Y] ", &newtime);
+            strftime(buffer, 256, "[%T | %d/%m/%Y] ", &newtime);
             ss << buffer;
         }
     }
@@ -54,7 +54,8 @@ static void showMessage(std::string msg, std::string scope = "", bool error = fa
 
     if (error) {
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 4);
-        std::cerr << ss.str() << std::endl;
+        // Not std::cerr because redirect it to the same file that std::cout seems impossible
+        std::cout << ss.str() << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
     }
     else {
@@ -64,15 +65,21 @@ static void showMessage(std::string msg, std::string scope = "", bool error = fa
     }
 }
 
-static void showMessage(char* msg, std::string scope = "", bool error = false, bool show_time = true)
+static void showMessage(const char* msg, std::string scope = "", bool error = false, bool show_time = true)
 {
     showMessage(std::string(msg), scope, error, show_time); // Big brain moment
 }
 
 static bool doesFileExist(LPCWSTR lpszFilename)
 {
-    return ((GetFileAttributes(lpszFilename) != INVALID_FILE_ATTRIBUTES)
-        && (GetLastError() == ERROR_FILE_NOT_FOUND));
+    DWORD attr = GetFileAttributes(lpszFilename);
+    return ((attr != INVALID_FILE_ATTRIBUTES) && !(attr & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+static bool doesFolderExist(LPCWSTR lpszFoldername)
+{
+    DWORD attr = GetFileAttributes(lpszFoldername);
+    return ((attr != INVALID_FILE_ATTRIBUTES) && (attr & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 static void ToUpper(std::string& str)
@@ -142,4 +149,21 @@ static std::string getConfigEntry(std::string name, std::string key, bool allow_
         showMessage("Unable to open file \"" + name + "\" !", "getConfigEntry", true);
     }
     return result;
+}
+
+static std::string extremRound(float val)
+{
+    if (val == 0) // prevent div 0 and the explosion of the universe
+        return "0";
+
+    std::string simple = std::to_string(val);
+    simple = simple.substr(0, simple.find(".") + 2);
+
+    if (simple.at(simple.length() - 1) == '1' ||
+        simple.at(simple.length() - 1) == '9') {
+        float tmp = roundf(std::stof(simple));
+        if (tmp > 0.1)
+            return extremRound(tmp);
+    }
+    return simple;
 }

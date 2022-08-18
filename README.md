@@ -12,7 +12,7 @@ A brand new way to get EE statistics! Open-Source and [GDPR](https://ec.europa.e
 🗺 County and City\
 ⚙ Hardware Informations\
 🔧 Compatibility Options\
-And some other useful tidbits to improve the compatibility of the game and follow the evolution of the game.
+And some other useful infos to improve the compatibility of the game and follow the evolution of the game.
 
 ## Build
 Require cURL ! \
