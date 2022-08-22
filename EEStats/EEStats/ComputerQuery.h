@@ -24,9 +24,9 @@ public:
 	std::string getGraphicDeviceId();
 	std::string getGraphicName();
 	std::string getGraphicVersion();
-	uint32_t getGraphicCurrentRefreshRate();
+	uint32_t getGraphicRefreshRate();
 	// std::string getGraphicMaxRefreshRate();
-	uint32_t getGraphicCurrentBitsPerPixel();
+	uint32_t getGraphicBitsPerPixel();
 	float getGraphicDedicatedMemory();
 	
 	// CPU
@@ -68,9 +68,9 @@ public:
 	// Info
 	void printInfos();
 
-	// Windows
+	// Windows (Those nb allow > & < op)
 	typedef enum WindowsVersion {
-		Win11, Win10, Win8, Win8_1, Win7, WinVista, WinXP, WinUnknown
+		Win11 = 700, Win10 = 600, Win8 = 500, Win8_1 = 400, Win7 = 300, WinVista = 200, WinXP = 100, WinUnknown = -1
 	} WindowsVersion;
 
 	WindowsVersion getWindowsVersionCQ();
@@ -80,5 +80,8 @@ public:
 private:
 	std::unique_ptr<WmiHelper> _wmiHelper = std::make_unique<WmiHelper>();
 	std::string _bestGraphicPNPDeviceID;
+	SIZE _windowsResolution;
+	unsigned int _refreshRate;
+	unsigned int _bitsPerPixel;
 };
 

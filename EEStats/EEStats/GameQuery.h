@@ -20,7 +20,7 @@ public:
 		ST_PlayingSolo,
 		ST_PlayingOnline,
 		ST_Lobby,
-		ST_Editor,				// Unable to detect yet
+		ST_Editor,				// Unable to detect yet :[
 		ST_Unknown
 	};
 
@@ -28,11 +28,17 @@ public:
 	bool isPlaying();
 	bool inLobby();
 
+	bool isMinimized(); // WARNING: The debug console is also considered as the game Window
+	bool isElevated();
+
 	char* getUsername();
 
 	std::map<std::string, std::string> getCDKeys();
 	
 	ScreenType getCurrentScreen();
+	SIZE getGameResolution();
+	SIZE getMenuResolution();
+	int getBitsPerPixel();
 
 	char* getGameBaseVersion();
 	char* getGameDataVersion();
@@ -46,6 +52,10 @@ public:
 	std::string getWONProductName();
 	std::string getWONProductDirectory();
 	std::string getWONProductVersion();
+
+	std::string getGPURasterizerName();
+	bool isVSyncEnabled();
+	float getFPS(float updateInterval);
 
 private:
 	std::string _game_path;

@@ -83,6 +83,7 @@ bool EEStats::sendSessionInfos()
     args << "&game_base_version=" << gq->getGameBaseVersion();
     args << "&game_data_version=" << gq->getGameDataVersion();
     args << "&game_is_expansion=" << ((gq->getProductType() == GameQuery::ProductType::PT_AoC) ? "1" : "0");
+    args << "&game_is_elevated=" << gq->isElevated() ? "1" : "0";
 
     // WON
     showMessage("Recovering WON Infos...", "EEStats");
@@ -105,15 +106,17 @@ bool EEStats::sendSessionInfos()
     if (!vend.empty())
         args << "&gpu_vendor=" << vend;
     auto gpu_name = cq->getGraphicName();
-    if (!gpu_name.empty())
+    if (!gpu_name.empty()) {
+        trim(gpu_name);
         args << "&gpu_name=" << gpu_name;
+    }
     auto gpu_version = cq->getGraphicVersion();
     if (!gpu_version.empty())
         args << "&gpu_version=" << gpu_version;
-    auto gpu_refresh_rate = cq->getGraphicCurrentRefreshRate();
+    auto gpu_refresh_rate = cq->getGraphicRefreshRate();
     if (gpu_refresh_rate > 1)
         args << "&gpu_refresh_rate=" << gpu_refresh_rate;
-    auto gpu_bits_per_pixel = cq->getGraphicCurrentBitsPerPixel();
+    auto gpu_bits_per_pixel = cq->getGraphicBitsPerPixel();
     if (gpu_bits_per_pixel != 0)
         args << "&gpu_bits_per_pixel=" << gpu_bits_per_pixel;
     auto gpu_dedicated_memory = cq->getGraphicDedicatedMemory();
@@ -126,8 +129,10 @@ bool EEStats::sendSessionInfos()
     if (!cpu_id.empty())
         args << "&cpu_id=" << cpu_id;
     auto cpu_name = cq->getProcessorName();
-    if (!cpu_name.empty())
+    if (!cpu_name.empty()) {
+        trim(cpu_name);
         args << "&cpu_name=" << cpu_name;
+    }
     auto cpu_nb_cores = cq->getProcessorNumberOfCores();
     if (cpu_nb_cores > 0)
         args << "&cpu_nb_cores=" << cpu_nb_cores;
@@ -143,25 +148,18 @@ bool EEStats::sendSessionInfos()
 
     // OS
     showMessage("Recovering OS Infos...", "EEStats");
-    std::string os_name;
-    if (cq->isWine()) {
-        std::string wine = "Wine";
-        const char* version = cq->getWineVersion();
-        if (version && strlen(version) > 0)
-            wine += " " + std::string(version);
-        os_name = wine;
-    }
-    else {
-        os_name = cq->getWindowsName();
-    }
-    if (!os_name.empty())
+    std::string os_name = cq->isWine() ? "Wine" : cq->getWindowsName();
+    if (!os_name.empty()) {
+        trim(os_name);
         args << "&os_name=" << os_name;
-    auto os_version = cq->getWindowsVersion();
+    }
+    auto os_version = cq->isWine() ? (cq->getWineVersion() == NULL ? "" : cq->getWineVersion()) : cq->getWindowsVersion();
     if (!os_version.empty())
         args << "&os_version=" << os_version;
     auto os_locale = cq->getWindowsLocale();
     if (!os_locale.empty())
         args << "&os_locale=" << os_locale;
+    args << "&os_virtual_machine=" << cq->runInVM() ? "1" : "0";
 
     // Screen
     showMessage("Recovering Screen Infos...", "EEStats");
@@ -187,10 +185,67 @@ bool EEStats::sendSessionInfos()
     if (!user_request.first)
         return false;
     if (user_request.second.first != 201) {
-        showMessage("Invalid HTTP code when asking a session id!", "EEStats", true);
+        showMessage("Invalid HTTP code when sending session infos!", "EEStats", true);
         return false;
     }
-    return !_session_id.empty();
+    return true;
+}
+
+
+bool EEStats::sendPerformanceInfos(int fps_average, std::string start_time_str, std::string end_time_str)
+{
+    if (_session_id.empty()) {
+        showMessage("Unable to send the performance infos because the session uuid is empty!", "EEStats", true);
+        return false;
+    }
+    else if (fps_average <= 0) {
+        showMessage("Unable to send the performance infos because the average fps is invalid!", "EEStats", true);
+        return false;
+    }
+    else if (start_time_str.empty() || end_time_str.empty()) {
+        showMessage("Unable to send the performance infos because the dates are invalid!", "EEStats", true);
+        return false;
+    }
+
+    GameQuery* gq = getGameQuery();
+    ComputerQuery* cq = getComputerQuery();
+
+    std::stringstream args;
+    args << "session_uuid=" << _session_id;
+
+    args << "&start=" << start_time_str;
+    args << "&last=" << end_time_str;
+
+    showMessage("Recovering Game Infos...", "EEStats");
+    args << "&singleplayer=" << !gq->inLobby();
+
+    auto params = gq->getGPURasterizerName();
+    if (!params.empty()) {
+        trim(params);
+        args << "&rasterizer_name=" << params;
+    }
+    args << "&vsync=" << gq->isVSyncEnabled() ? "1" : "0";
+    args << "&fps_average=" << fps_average;
+    int bitsPerPixel = gq->getBitsPerPixel();
+    if (bitsPerPixel != 0)
+        args << "&bits_per_pixel=" << bitsPerPixel;
+
+    SIZE menuRes = gq->getMenuResolution();
+    if (menuRes.cx != 0 || menuRes.cy != 0)
+        args << "&menu_resolution=" << menuRes.cx << "x" << menuRes.cy;
+    SIZE gameRes = gq->getGameResolution();
+    if (gameRes.cx != 0 || gameRes.cy != 0)
+        args << "&game_resolution=" << gameRes.cx << "x" << gameRes.cy;
+
+    std::cout << args.str() << std::endl;
+    auto user_request = sendRequest("performance.php", "POST", args.str());
+    if (!user_request.first)
+        return false;
+    if (user_request.second.first != 201) {
+        showMessage("Invalid HTTP code when sending performance infos!", "EEStats", true);
+        return false;
+    }
+    return true;
 }
 
 bool EEStats::isReachable()
@@ -220,7 +275,7 @@ void EEStats::sendScreen(GameQuery::ScreenType screen_type)
 bool EEStats::sendPing()
 {
     if (_session_id.empty()) {
-        showMessage("Unable to send the session infos because the session uuid is empty!", "EEStats", true);
+        showMessage("Unable to send the session ping because the session uuid is empty!", "EEStats", true);
         return false;
     }
 
@@ -231,7 +286,7 @@ bool EEStats::sendPing()
     if (!user_request.first)
         return false;
     if (user_request.second.first != 200) {
-        showMessage("Invalid HTTP code when asking a session id!", "EEStats", true);
+        showMessage("Invalid HTTP code when sending session ping!", "EEStats", true);
         return false;
     }
     return true;

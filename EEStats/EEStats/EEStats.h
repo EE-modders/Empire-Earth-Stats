@@ -22,7 +22,6 @@
 #include <string>
 #include <map>
 
-unsigned int __stdcall MainThread(void* data);
 unsigned int __stdcall PingThread(void* data);
 
 class EEStats
@@ -34,6 +33,7 @@ public:
 
 	bool askSessionId();
 	bool sendSessionInfos();
+	bool sendPerformanceInfos(int fps_average, std::string start_time_str, std::string end_time_str);
 	// Keep the session open for session time, need to be send after at least one other query
 	bool sendPing();
 

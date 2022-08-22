@@ -27,6 +27,24 @@ ComputerQuery::ComputerQuery()
         // WMI sh$t that make me loose 8h just because the fk string require \\ and not \ for a fk simple WHERE string cmp ?!
         replaceAll(_bestGraphicPNPDeviceID, "\\", "\\\\");
     }
+
+    // Cache resolution
+    _windowsResolution.cx = GetSystemMetrics(SM_CXSCREEN);
+    _windowsResolution.cy = GetSystemMetrics(SM_CYSCREEN);
+
+    // Cache refresh rate
+    auto queryResultRefreshRate = _wmiHelper->queryWMI(("SELECT CurrentRefreshRate FROM Win32_VideoController WHERE PNPDeviceID=\"" + _bestGraphicPNPDeviceID + "\"").c_str(), L"CurrentRefreshRate");
+    if (queryResultRefreshRate.empty() || queryResultRefreshRate.at(0).empty())
+        _refreshRate = 0;
+    else
+        _refreshRate = std::atoi(utf16ToUtf8(queryResultRefreshRate.at(0)).c_str());
+
+    // Cache bits per pixel
+    auto queryResultBitsPerPixel = _wmiHelper->queryWMI(("SELECT CurrentBitsPerPixel FROM Win32_VideoController WHERE PNPDeviceID=\"" + _bestGraphicPNPDeviceID + "\"").c_str(), L"CurrentBitsPerPixel");
+    if (queryResultBitsPerPixel.empty() || queryResultBitsPerPixel.at(0).empty())
+        _bitsPerPixel = 0;
+    else
+        _bitsPerPixel = std::atoi(utf16ToUtf8(queryResultBitsPerPixel.at(0)).c_str());
 }
 
 float ComputerQuery::getRAM()
@@ -90,20 +108,22 @@ std::string ComputerQuery::getGraphicVersion()
     return utf16ToUtf8(queryResult.at(0));
 }
 
-uint32_t ComputerQuery::getGraphicCurrentRefreshRate()
+/// <summary>
+/// Recover the refresh rate when ComputerQuery is created!!
+/// The value will be invalid if the refresh rate has been changed by the game before the ComputerQuery ctor
+/// </summary>
+uint32_t ComputerQuery::getGraphicRefreshRate()
 {
-    auto queryResult = _wmiHelper->queryWMI(("SELECT CurrentRefreshRate FROM Win32_VideoController WHERE PNPDeviceID=\"" + _bestGraphicPNPDeviceID + "\"").c_str(), L"CurrentRefreshRate");
-    if (queryResult.empty() || queryResult.at(0).empty())
-        return 0;
-    return std::atoi(utf16ToUtf8(queryResult.at(0)).c_str());
+    return _refreshRate;
 }
 
-uint32_t ComputerQuery::getGraphicCurrentBitsPerPixel()
+/// <summary>
+/// Recover the bits per pixel when ComputerQuery is created!!
+/// The value will be invalid if the bits per pixel has been changed by the game before the ComputerQuery ctor
+/// </summary>
+uint32_t ComputerQuery::getGraphicBitsPerPixel()
 {
-    auto queryResult = _wmiHelper->queryWMI(("SELECT CurrentBitsPerPixel FROM Win32_VideoController WHERE PNPDeviceID=\"" + _bestGraphicPNPDeviceID + "\"").c_str(), L"CurrentBitsPerPixel");
-    if (queryResult.empty() || queryResult.at(0).empty())
-        return 0;
-    return std::atoi(utf16ToUtf8(queryResult.at(0)).c_str());
+    return _bitsPerPixel;
 }
 
 float ComputerQuery::getGraphicDedicatedMemory()
@@ -244,27 +264,18 @@ std::string ComputerQuery::getDirectX_WrapperParams()
             return "";
         if (ws.at(ws.length() - 1) == ';')
             ws = ws.substr(0, ws.length() - 1);
-        return utf16ToUtf8(ws);;
+        return utf16ToUtf8(ws);
     }
     return "";
 }
 
+/// <summary>
+/// Recover the resolution when ComputerQuery is created!!
+/// The value will be invalid if the resolution has been changed by the game before the ComputerQuery ctor
+/// </summary>
 SIZE ComputerQuery::getWindowsResolution()
 {
-    SIZE res;
-
-    /*
-        DISABLED because zocker said it works bad on Wine
-
-        // Get a handle to the desktop window
-        const HWND hDesktop = GetDesktopWindow();
-        // Get the size of screen to the variable desktop
-        GetWindowRect(hDesktop, &desktop);
-    */
-
-    res.cx = GetSystemMetrics(SM_CXSCREEN);
-    res.cy = GetSystemMetrics(SM_CYSCREEN);
-    return res;
+    return _windowsResolution;
 }
 
 std::string ComputerQuery::getWindowsLocale()
@@ -307,7 +318,6 @@ bool ComputerQuery::isWine()
 
 const char* ComputerQuery::getWineVersion()
 {
-
     HMODULE ntdllMod = GetModuleHandle(L"ntdll.dll");
     const char* (CDECL * w_g_v)() = NULL;
 

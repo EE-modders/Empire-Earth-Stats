@@ -15,8 +15,11 @@ A brand new way to get EE statistics! Open-Source and [GDPR](https://ec.europa.e
 And some other useful infos to improve the compatibility of the game and follow the evolution of the game.
 
 ## Build
-Require cURL ! \
+Require cURL x86 ! (tested with v7.84) \
 In EEStats\EEStats\curl place headers and libs (Release: libcurl_a.lib and Debug: libcurl_a_debug.lib)
+
+## Note
+cURL seems to require Windows Vista or 7 SP1 (I can't test), using boost with XP feature set could be a good idea.
 
 ## Credit
 cURL (License: https://github.com/curl/curl/blob/master/COPYING, Website: https://curl.se/) \

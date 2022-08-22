@@ -1,6 +1,7 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "pch.h"
 
+#include "Utils.h"
 #include "Library.h"
 #include "MemoryHelper.h"
 #include "GameQuery.h"
@@ -12,16 +13,17 @@ static Library* lib = nullptr;
 
 bool __stdcall Attach(HMODULE hModule)
 {
+    FILE* f;
 
 #ifdef _DEBUG
     if (!GetConsoleWindow()) // Already Allocated
         AllocConsole();
     freopen_s(&f, "CONOUT$", "w", stdout);
+    freopen_s(&f, "CONOUT$", "w", stderr);
 #else
-    FILE* f;
-    // WARN: cURL verbose need to be DISABLED !
-    //       Or the curl_easy_perform() will crash...
-    //       I have no idea of how to fix that :|
+    // Delete log after a given size
+    if (doesFileExist(L"EEStats.log") && fileSize(L"EEStats.log") > 2 /*Mo*/ * 100 * 100 * 100)
+        DeleteFile(L"EEStats.log");
     freopen_s(&f, "EEStats.log", "a", stdout);
 #endif // DEBUG
 

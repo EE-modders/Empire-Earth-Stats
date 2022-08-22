@@ -9,14 +9,12 @@
 #include "Utils.h"
 #include "sha512.h"
 
-#pragma comment (lib, "Shlwapi.lib")
-
 GameQuery::GameQuery()
 {
     TCHAR szExeFileName[MAX_PATH];
     GetModuleFileName(NULL, szExeFileName, MAX_PATH);
-    LPWSTR fileName = PathFindFileName((LPCWSTR) szExeFileName);
-    std::string exeFileName = utf16ToUtf8(fileName);
+    std::string path = utf16ToUtf8(szExeFileName);
+    std::string exeFileName = path.substr(path.find_last_of("/\\") + 1);
 
     ToUpper(exeFileName);
 
@@ -39,6 +37,17 @@ bool GameQuery::inLobby() {
     return 0 != *(int*)calcAddress(0x00544254);
 }
 
+bool GameQuery::isMinimized()
+{
+    HWND hwnd = GetForegroundWindow();
+    if (hwnd == NULL) return false;
+
+    DWORD foregroundPid;
+    if (GetWindowThreadProcessId(hwnd, &foregroundPid) == 0) return false;
+
+    return (foregroundPid != GetCurrentProcessId());
+}
+
 char* GameQuery::getUsername()
 {
     memoryPTR ptr = {
@@ -46,6 +55,21 @@ char* GameQuery::getUsername()
         { 0x0 }
     };
     return (char*)tracePointer(&ptr);
+}
+
+bool GameQuery::isElevated()
+{
+    bool fRet = false;
+    HANDLE hToken = NULL;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+        TOKEN_ELEVATION Elevation;
+        DWORD cbSize = sizeof(TOKEN_ELEVATION);
+        if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize))
+            fRet = Elevation.TokenIsElevated;
+    }
+    if (hToken)
+        CloseHandle(hToken);
+    return fRet;
 }
 
 /// <summary>
@@ -116,6 +140,8 @@ std::map<std::string, std::string> GameQuery::getCDKeys()
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Sierra\\CDKeys"),
         0, KEY_READ, &key) == ERROR_SUCCESS) {
         tmp = getCDKeysFromHKEY(key);
+        for each (auto val in tmp)
+            std::cout << val.first << " | " << val.second << std::endl;
         result.insert(tmp.begin(), tmp.end());
     }
     RegCloseKey(key);
@@ -123,6 +149,8 @@ std::map<std::string, std::string> GameQuery::getCDKeys()
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\WOW6432Node\\Sierra\\CDKeys"),
         0, KEY_READ, &key) == ERROR_SUCCESS) {
         tmp = getCDKeysFromHKEY(key);
+        for each (auto val in tmp)
+            std::cout << val.first << " | " << val.second << std::endl;
         result.insert(tmp.begin(), tmp.end());
     }
     RegCloseKey(key);
@@ -130,6 +158,8 @@ std::map<std::string, std::string> GameQuery::getCDKeys()
     if (RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("SOFTWARE\\WOW6432Node\\Sierra\\CDKeys"),
         0, KEY_READ, &key) == ERROR_SUCCESS) {
         tmp = getCDKeysFromHKEY(key);
+        for each (auto val in tmp)
+            std::cout << val.first << " | " << val.second << std::endl;
         result.insert(tmp.begin(), tmp.end());
     }
     RegCloseKey(key);
@@ -137,6 +167,8 @@ std::map<std::string, std::string> GameQuery::getCDKeys()
     if (RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("SOFTWARE\\WOW6432Node\\Sierra\\CDKeys"),
         0, KEY_READ, &key) == ERROR_SUCCESS) {
         tmp = getCDKeysFromHKEY(key);
+        for each (auto val in tmp)
+            std::cout << val.first << " | " << val.second << std::endl;
         result.insert(tmp.begin(), tmp.end());
     }
     RegCloseKey(key);
@@ -154,6 +186,30 @@ GameQuery::ScreenType GameQuery::getCurrentScreen()
         return ST_Lobby;
     else
         return ST_Menu;
+}
+
+
+SIZE GameQuery::getGameResolution()
+{
+    SIZE sz;
+
+    sz.cx = *(int*)calcAddress(0x5193FC);
+    sz.cy = *(int*)calcAddress(0x5193F8);
+    return sz;
+}
+
+SIZE GameQuery::getMenuResolution()
+{
+    SIZE sz;
+
+    sz.cx = *(int*)calcAddress(0x138B3D);
+    sz.cy = *(int*)calcAddress(0x138B38);
+    return sz;
+}
+
+int GameQuery::getBitsPerPixel()
+{
+    return *(int*)calcAddress(0x5193F4);
 }
 
 char* GameQuery::getGameBaseVersion()
@@ -238,7 +294,11 @@ void GameQuery::setVersionSuffix(std::string suffix)
 
 std::string GameQuery::getGameChecksum()
 {
-    return sw::sha512::file("Empire Earth.exe");
+    if (_productType == PT_EE)
+        return sw::sha512::file("Empire Earth.exe");
+    else if (_productType == PT_AoC)
+        return sw::sha512::file("EE-AOC.exe");
+    return "";
 }
 
 GameQuery::ProductType GameQuery::getProductType()
@@ -259,4 +319,55 @@ std::string GameQuery::getWONProductDirectory()
 std::string GameQuery::getWONProductVersion()
 {
     return getConfigEntry("zzWONVersion.cfg", "Version");
+}
+
+std::string GameQuery::getGPURasterizerName()
+{
+    memoryPTR ptr = { 0x00519348, { 0x0 } };
+    return (char*)tracePointer(&ptr);
+}
+
+bool GameQuery::isVSyncEnabled()
+{
+    return 0 != (bool) calcAddress(0x544254);
+}
+
+DWORD LLETMPoll = *calcAddress(0x42329C);
+unsigned int nRenderedFrames = 0;
+DWORD fpshookReturnAddr;
+
+void __declspec(naked) getFPSNew() {
+    __asm {
+        push eax
+        mov eax, [nRenderedFrames]
+        add eax, 0x1
+        mov[nRenderedFrames], eax
+        pop eax
+
+        call[LLETMPoll]
+        jmp[fpshookReturnAddr]
+    }
+}
+
+bool isFpsInit = false;
+void setFPSUpdater()
+{
+    isFpsInit = true;
+    functionInjector(
+        calcAddress(0x24E29E),
+        getFPSNew,
+        fpshookReturnAddr,
+        6
+    );
+}
+
+float GameQuery::getFPS(float updateInterval)
+{
+    if (!isFpsInit)
+        setFPSUpdater();
+    if (nRenderedFrames == 0 || updateInterval == 0)
+        return 0; // Let's avoid some div 0
+    float result = ((float) nRenderedFrames / updateInterval);
+    nRenderedFrames = 0;
+    return result;
 }

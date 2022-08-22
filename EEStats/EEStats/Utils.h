@@ -25,23 +25,36 @@ static void replaceAll(std::string& str, const std::string& from, const std::str
     }
 }
 
+static LONGLONG fileSize(const wchar_t* name)
+{
+    WIN32_FILE_ATTRIBUTE_DATA fad;
+    if (!GetFileAttributesEx(name, GetFileExInfoStandard, &fad))
+        return -1; // error condition, could call GetLastError to find out more
+    LARGE_INTEGER size;
+    size.HighPart = fad.nFileSizeHigh;
+    size.LowPart = fad.nFileSizeLow;
+    return size.QuadPart;
+}
+
+static const std::string currentDateTime(std::string format) {
+    time_t now = time(0);
+    struct tm tstruct;
+    char buf[256];
+    localtime_s(&tstruct, &now);
+    strftime(buf, sizeof(buf), format.c_str(), &tstruct);
+    return buf;
+}
+
+#include <mutex>
+static std::mutex mtx;
+
 static void showMessage(std::string msg, std::string scope = "", bool error = false, bool show_time = true)
 {
+    std::unique_lock<std::mutex> lck(mtx);
     std::stringstream ss;
 
-    if (show_time) {
-        struct tm newtime;
-        __time64_t long_time;
-        char buffer[256];
-        errno_t err;
-
-        time(&long_time);
-        err = localtime_s(&newtime, &long_time);
-        if (!err) {
-            strftime(buffer, 256, "[%T | %d/%m/%Y] ", &newtime);
-            ss << buffer;
-        }
-    }
+    if (show_time)
+        ss << "[" << currentDateTime("%H:%M:%S %d/%m/%Y") << "] ";
 
     if (error)
         ss << "[ERR] ";
@@ -54,7 +67,6 @@ static void showMessage(std::string msg, std::string scope = "", bool error = fa
 
     if (error) {
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 4);
-        // Not std::cerr because redirect it to the same file that std::cout seems impossible
         std::cout << ss.str() << std::endl;
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
     }
@@ -65,10 +77,10 @@ static void showMessage(std::string msg, std::string scope = "", bool error = fa
     }
 }
 
-static void showMessage(const char* msg, std::string scope = "", bool error = false, bool show_time = true)
+/*static void showMessage(const char* msg, std::string scope = "", bool error = false, bool show_time = true)
 {
     showMessage(std::string(msg), scope, error, show_time); // Big brain moment
-}
+}*/
 
 static bool doesFileExist(LPCWSTR lpszFilename)
 {

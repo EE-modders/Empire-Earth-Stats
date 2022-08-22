@@ -32,7 +32,7 @@ public:
         // Dll Name
         TCHAR _dllName[MAX_PATH];
         GetModuleFileName(hModule, _dllName, MAX_PATH);
-        dllName = _dllName;
+        dllName = _dllName; // recover EE.exe... fkkkkkkkk
 
         showMessage("Loaded!", "Library");
     }
@@ -47,16 +47,16 @@ public:
 
     void PrintCredits()
     {
-        showMessage("----------------------------------------------------");
+        showMessage("--------------------------------------------------");
         showMessage("  Empire Earth Stats v" + EES_VERSION_STR);
         showMessage("  By EnergyCube for the Empire Earth Community");
         showMessage("  This project is Open-Source under GNU GPL v3");
-        showMessage("----------------------------------------------------");
+        showMessage("--------------------------------------------------");
         showMessage("  Credits:");
         showMessage("    zocker_160 (would be impossible without him)");
         showMessage("    cURL: https://curl.se/");
         showMessage("    sha512.h and crc.h: Stefan Wilhelm");
-        showMessage("----------------------------------------------------");
+        showMessage("--------------------------------------------------");
     }
 
 
