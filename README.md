@@ -1,3 +1,7 @@
+![Visitor count](https://shields-io-visitor-counter.herokuapp.com/badge?page=EE-modders.Empire-Earth-Stats)
+[![GitHub stars](https://img.shields.io/github/stars/EE-modders/Empire-Earth-Setup)](https://github.com/EE-modders/Empire-Earth-Stats/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/EE-modders/Empire-Earth-Setup)](https://github.com/EE-modders/Empire-Earth-Stats/network)
+[![Setup Version](https://img.shields.io/badge/Empire%20Earth%20Stats%20Version-v1.0.0-blue)](https://github.com/EE-modders/Empire-Earth-Stats)
 # 📊 Empire Earth Stats
 A brand new way to get EE statistics! Open-Source and [GDPR](https://ec.europa.eu/info/law/law-topic/data-protection/data-protection-eu_en) compliant! \
 By [EnergyCube](https://github.com/EnergyCube) for the Empire Earth Community.
