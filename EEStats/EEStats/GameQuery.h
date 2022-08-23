@@ -46,7 +46,7 @@ public:
 
 	void setVersionSuffix(std::string suffix);
 
-	std::string getGameChecksum();
+	// std::string getGameChecksum();
 	ProductType getProductType();
 
 	std::string getWONProductName();

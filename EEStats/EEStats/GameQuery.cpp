@@ -8,6 +8,7 @@
 #include "MemoryHelper.h"
 #include "Utils.h"
 #include "sha512.h"
+#include "sha1.h"
 
 GameQuery::GameQuery()
 {
@@ -50,10 +51,7 @@ bool GameQuery::isMinimized()
 
 char* GameQuery::getUsername()
 {
-    memoryPTR ptr = {
-        0x51930C,
-        { 0x0 }
-    };
+    memoryPTR ptr = { 0x51930C, { 0x0 } };
     return (char*)tracePointer(&ptr);
 }
 
@@ -75,7 +73,7 @@ bool GameQuery::isElevated()
 /// <summary>
 /// List and return values in the given key that are REG_BINARY
 /// </summary>
-/// <returns>A map with name as key and data as value</returns>
+/// <returns>A map with name as data and data as key</returns>
 std::map<std::string, std::string> getCDKeysFromHKEY(HKEY hKey)
 {
     std::map<std::string, std::string> result;
@@ -125,7 +123,7 @@ std::map<std::string, std::string> getCDKeysFromHKEY(HKEY hKey)
                 &valueBufferSize);
             
             if (retCode == ERROR_SUCCESS && dwType == 3)
-                result.insert({ utf16ToUtf8(achValue) , hexStr(valueBuffer, valueBufferSize)});
+                result.insert({ hexStr(valueBuffer, valueBufferSize), utf16ToUtf8(achValue) });
         }
     }
     return result;
@@ -140,36 +138,33 @@ std::map<std::string, std::string> GameQuery::getCDKeys()
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Sierra\\CDKeys"),
         0, KEY_READ, &key) == ERROR_SUCCESS) {
         tmp = getCDKeysFromHKEY(key);
-        for each (auto val in tmp)
-            std::cout << val.first << " | " << val.second << std::endl;
         result.insert(tmp.begin(), tmp.end());
+        tmp.clear();
     }
     RegCloseKey(key);
 
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\WOW6432Node\\Sierra\\CDKeys"),
         0, KEY_READ, &key) == ERROR_SUCCESS) {
         tmp = getCDKeysFromHKEY(key);
-        for each (auto val in tmp)
-            std::cout << val.first << " | " << val.second << std::endl;
         result.insert(tmp.begin(), tmp.end());
+        tmp.clear();
     }
     RegCloseKey(key);
+
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("SOFTWARE\\Sierra\\CDKeys"),
+        0, KEY_READ, &key) == ERROR_SUCCESS) {
+        tmp = getCDKeysFromHKEY(key);
+        result.insert(tmp.begin(), tmp.end());
+        tmp.clear();
+    }
+    RegCloseKey(key);
+
 
     if (RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("SOFTWARE\\WOW6432Node\\Sierra\\CDKeys"),
         0, KEY_READ, &key) == ERROR_SUCCESS) {
         tmp = getCDKeysFromHKEY(key);
-        for each (auto val in tmp)
-            std::cout << val.first << " | " << val.second << std::endl;
         result.insert(tmp.begin(), tmp.end());
-    }
-    RegCloseKey(key);
-
-    if (RegOpenKeyEx(HKEY_CURRENT_USER, TEXT("SOFTWARE\\WOW6432Node\\Sierra\\CDKeys"),
-        0, KEY_READ, &key) == ERROR_SUCCESS) {
-        tmp = getCDKeysFromHKEY(key);
-        for each (auto val in tmp)
-            std::cout << val.first << " | " << val.second << std::endl;
-        result.insert(tmp.begin(), tmp.end());
+        tmp.clear();
     }
     RegCloseKey(key);
 
@@ -187,7 +182,6 @@ GameQuery::ScreenType GameQuery::getCurrentScreen()
     else
         return ST_Menu;
 }
-
 
 SIZE GameQuery::getGameResolution()
 {
@@ -225,7 +219,6 @@ char* GameQuery::getGameDataVersion()
 {
     memoryPTR memEEC { 0x0513264, { 0x0 } };
     memoryPTR memAOC { 0x0529A0C, { 0x0 } };
-    
 
     if (_productType == PT_EE)
         return (char*)tracePointer(&memEEC);
@@ -292,14 +285,16 @@ void GameQuery::setVersionSuffix(std::string suffix)
     );
 }
 
+/* Don't seems to return a valid value, probably because the binary is already in use I guess
 std::string GameQuery::getGameChecksum()
 {
     if (_productType == PT_EE)
-        return sw::sha512::file("Empire Earth.exe");
+        return sw::sha1::file("Empire Earth.exe");
     else if (_productType == PT_AoC)
-        return sw::sha512::file("EE-AOC.exe");
+        return sw::sha1::file("EE-AOC.exe");
     return "";
 }
+*/
 
 GameQuery::ProductType GameQuery::getProductType()
 {

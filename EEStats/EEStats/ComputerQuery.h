@@ -17,7 +17,6 @@ public:
 
 	// Memory
 	float getRAM();
-	std::string extremRound(double val);
 
 	// GPU
 	std::string getGraphicVendorId();
@@ -34,8 +33,7 @@ public:
 	std::string getProcessorName();
 	std::string getProcessorArch();
 	uint32_t getProcessorNumberOfCores();
-	uint16_t getProcessorLoadPercentage();
-	std::string getProcessorCurrentCorePercentage();
+	uint16_t getProcessorLoadPercentage(); // all cores
 
 	// DX
 	int getDirectX_MajorVersion();
@@ -64,9 +62,6 @@ public:
 	std::string getComputerSerial();
 	std::string getWindowsDiskSerial();
 	std::string getUID();
-
-	// Info
-	void printInfos();
 
 	// Windows (Those nb allow > & < op)
 	typedef enum WindowsVersion {

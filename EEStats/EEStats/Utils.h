@@ -45,12 +45,8 @@ static const std::string currentDateTime(std::string format) {
     return buf;
 }
 
-#include <mutex>
-static std::mutex mtx;
-
 static void showMessage(std::string msg, std::string scope = "", bool error = false, bool show_time = true)
 {
-    std::unique_lock<std::mutex> lck(mtx);
     std::stringstream ss;
 
     if (show_time)
@@ -77,11 +73,6 @@ static void showMessage(std::string msg, std::string scope = "", bool error = fa
     }
 }
 
-/*static void showMessage(const char* msg, std::string scope = "", bool error = false, bool show_time = true)
-{
-    showMessage(std::string(msg), scope, error, show_time); // Big brain moment
-}*/
-
 static bool doesFileExist(LPCWSTR lpszFilename)
 {
     DWORD attr = GetFileAttributes(lpszFilename);
@@ -97,6 +88,11 @@ static bool doesFolderExist(LPCWSTR lpszFoldername)
 static void ToUpper(std::string& str)
 {
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+}
+
+static void ToLower(std::string& str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 }
 
 static void ToLower(unsigned char* Pstr)
@@ -130,6 +126,7 @@ static std::string hexStr(BYTE* data, int len)
     return ss.str();
 }
 
+// Fun fact: Jodocus created a similar function, that is x10 bigger xD
 static std::string getConfigEntry(std::string name, std::string key, bool allow_space = true)
 {
     std::string result = "";
@@ -165,7 +162,7 @@ static std::string getConfigEntry(std::string name, std::string key, bool allow_
 
 static std::string extremRound(float val)
 {
-    if (val == 0) // prevent div 0 and the explosion of the universe
+    if (val == 0)
         return "0";
 
     std::string simple = std::to_string(val);

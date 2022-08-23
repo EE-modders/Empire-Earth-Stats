@@ -8,9 +8,10 @@ EEStats::EEStats(std::string base_url, std::string lib_version) :
     _base_url(base_url), _lib_version(lib_version)
 {
     showMessage("Init global cURL...", "EEStats");
-    curl_global_init(CURL_GLOBAL_ALL);
+    if (curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK)
+        throw std::exception("Unable to init cURL!");
     if (_base_url.at(_base_url.length() - 1) != '/')
-        _base_url += _base_url + '/';
+        _base_url += '/';
     showMessage("cURL global loaded!", "EEStats");
 }
 
@@ -57,7 +58,7 @@ bool EEStats::askSessionId()
     auto user_request = sendRequest("user.php", "POST", args.str());
     if (!user_request.first)
         return false;
-    if (user_request.second.first != 201) {
+    if (user_request.second.first < 200 || user_request.second.first >= 300) {
         showMessage("Invalid HTTP code when asking a session id!", "EEStats", true);
         return false;
     }
@@ -184,7 +185,7 @@ bool EEStats::sendSessionInfos()
     auto user_request = sendRequest("session.php", "POST", args.str());
     if (!user_request.first)
         return false;
-    if (user_request.second.first != 201) {
+    if (user_request.second.first < 200 || user_request.second.first >= 300) {
         showMessage("Invalid HTTP code when sending session infos!", "EEStats", true);
         return false;
     }
@@ -192,7 +193,7 @@ bool EEStats::sendSessionInfos()
 }
 
 
-bool EEStats::sendPerformanceInfos(int fps_average, std::string start_time_str, std::string end_time_str)
+bool EEStats::sendPerformanceInfos(int fps_average, std::string played_time)
 {
     if (_session_id.empty()) {
         showMessage("Unable to send the performance infos because the session uuid is empty!", "EEStats", true);
@@ -202,8 +203,8 @@ bool EEStats::sendPerformanceInfos(int fps_average, std::string start_time_str, 
         showMessage("Unable to send the performance infos because the average fps is invalid!", "EEStats", true);
         return false;
     }
-    else if (start_time_str.empty() || end_time_str.empty()) {
-        showMessage("Unable to send the performance infos because the dates are invalid!", "EEStats", true);
+    else if (played_time.empty() || played_time.compare("0:0:0") == 0) {
+        showMessage("Unable to send the performance infos because the played time is invalid!", "EEStats", true);
         return false;
     }
 
@@ -213,8 +214,7 @@ bool EEStats::sendPerformanceInfos(int fps_average, std::string start_time_str, 
     std::stringstream args;
     args << "session_uuid=" << _session_id;
 
-    args << "&start=" << start_time_str;
-    args << "&last=" << end_time_str;
+    args << "&played_time=" << played_time;
 
     showMessage("Recovering Game Infos...", "EEStats");
     args << "&singleplayer=" << !gq->inLobby();
@@ -241,7 +241,7 @@ bool EEStats::sendPerformanceInfos(int fps_average, std::string start_time_str, 
     auto user_request = sendRequest("performance.php", "POST", args.str());
     if (!user_request.first)
         return false;
-    if (user_request.second.first != 201) {
+    if (user_request.second.first < 200 || user_request.second.first >= 300) {
         showMessage("Invalid HTTP code when sending performance infos!", "EEStats", true);
         return false;
     }
@@ -250,26 +250,74 @@ bool EEStats::sendPerformanceInfos(int fps_average, std::string start_time_str, 
 
 bool EEStats::isReachable()
 {
-    auto reply = sendRequest("", "");
+    auto user_request = sendRequest("", "GET");
 
-    if (reply.first == CURLE_OK && reply.second.first >= 200 && reply.second.first <= 300)
-        return true;
-    return false;
+    if (!user_request.first)
+        return false;
+    if (user_request.second.first < 200 || user_request.second.first >= 300) {
+        showMessage("Invalid HTTP when trying to check if server is reachable!", "EEStats", true);
+        return false;
+    }
+    return true;
 }
 
 bool EEStats::isUpToDate()
 {
-    return true;
+    std::stringstream args;
+    args << "version=" << EES_VERSION_STR;
+    std::cout << args.str() << std::endl;
+    auto user_request = sendRequest("", "POST", args.str());
+
+    if (!user_request.first)
+        return false;
+    if (user_request.second.first < 200 && user_request.second.first >= 300) {
+        showMessage("Invalid HTTP code when checking if up to date!", "EEStats", true);
+        return false;
+    }
+    return user_request.second.second.compare("true") == 0;
 }
 
-bool EEStats::downloadUpdate()
+bool EEStats::downloadUpdate(std::wstring dllPath)
 {
-    return true;
+    auto user_request = sendRequest("", "GET");
+
+    if (!user_request.first)
+        return false;
+    if (user_request.second.first < 200 || user_request.second.first >= 300) {
+        showMessage("Invalid HTTP code when getting update url!", "EEStats", true);
+        return false;
+    }
+
+    if (downloadFile(user_request.second.second, utf16ToUtf8(dllPath + L".update"))) {
+        showMessage("Update downloaded!", "EEStats");
+        return true;
+    }
+    else {
+        showMessage("Unable to download update!", "EEStats", true);
+        return false;
+    }
 }
 
-void EEStats::sendScreen(GameQuery::ScreenType screen_type)
+bool EEStats::sendActivity(ScreenType screen_type, std::string time_spent)
 {
+    if (_session_id.empty()) {
+        showMessage("Unable to send activity because the session uuid is empty!", "EEStats", true);
+        return false;
+    }
+    std::stringstream args;
+    args << "session_uuid=" << _session_id;
+    args << "&screen_type=" << (uint16_t) screen_type;
+    args << "&time_spent=" << time_spent;
 
+    std::cout << args.str() << std::endl;
+    auto user_request = sendRequest("activity.php", "POST", args.str());
+    if (!user_request.first)
+        return false;
+    if (user_request.second.first < 200 || user_request.second.first >= 300) {
+        showMessage("Invalid HTTP code when sending activity!", "EEStats", true);
+        return false;
+    }
+    return true;
 }
 
 bool EEStats::sendPing()
@@ -285,7 +333,7 @@ bool EEStats::sendPing()
     auto user_request = sendRequest("session.php", "PATCH", args.str());
     if (!user_request.first)
         return false;
-    if (user_request.second.first != 200) {
+    if (user_request.second.first < 200 || user_request.second.first >= 300) {
         showMessage("Invalid HTTP code when sending session ping!", "EEStats", true);
         return false;
     }
@@ -377,11 +425,11 @@ std::pair<bool, std::pair<long, std::string>> EEStats::sendRequest(std::string p
     else {
         if (request_type.compare("GET") == 0)
             curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
-        else
+        else {
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request_type.c_str());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, params.c_str());
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, params.c_str());
+        }
     }
-
     std::string final_url = _base_url + path;
     replaceAll(final_url, " ", "%20");
 

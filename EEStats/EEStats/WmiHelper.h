@@ -10,8 +10,6 @@ public:
 	WmiHelper();
 	~WmiHelper();
 
-	bool InitWmi();
-
 	std::vector<std::wstring> queryWMI(const char* query, LPCWSTR value);
 	std::unordered_multimap<std::wstring, std::wstring> queryKeyValWMI(const char* query, LPCWSTR asKey, LPCWSTR asValue);
 

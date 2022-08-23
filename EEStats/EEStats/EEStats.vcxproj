@@ -145,13 +145,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ComputerQuery.h" />
-    <ClInclude Include="crc.h" />
     <ClInclude Include="EEStats.h" />
     <ClInclude Include="Library.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="GameQuery.h" />
     <ClInclude Include="MemoryHelper.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="sha1.h" />
     <ClInclude Include="sha512.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="WmiHelper.h" />

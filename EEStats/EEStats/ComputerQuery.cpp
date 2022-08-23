@@ -190,11 +190,6 @@ uint16_t ComputerQuery::getProcessorLoadPercentage()
     return std::atoi(utf16ToUtf8(queryResult.at(0)).c_str());
 }
 
-std::string ComputerQuery::getProcessorCurrentCorePercentage()
-{
-    return "";
-}
-
 int ComputerQuery::getDirectX_MajorVersion()
 {
     switch (getWindowsVersionCQ()) {

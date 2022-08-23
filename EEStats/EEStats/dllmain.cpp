@@ -13,20 +13,25 @@ static Library* lib = nullptr;
 
 bool __stdcall Attach(HMODULE hModule)
 {
+    // Instant create mutex to avoid multiple load if the DLL stop for some reasons during game startup
+    HANDLE handleMutex = CreateMutex(NULL, TRUE, (L"EEStats_" + std::to_wstring(GetCurrentProcessId())).c_str());
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+        return false;
+
     FILE* f;
 
 #ifdef _DEBUG
     if (!GetConsoleWindow()) // Already Allocated
         AllocConsole();
     freopen_s(&f, "CONOUT$", "w", stdout);
-    freopen_s(&f, "CONOUT$", "w", stderr);
+    freopen_s(&f, "CONOUT$", "w", stderr); // Not required technically, but required for cURL verbose
 #else
     // Delete log after a given size
     if (doesFileExist(L"EEStats.log") && fileSize(L"EEStats.log") > 2 /*Mo*/ * 100 * 100 * 100)
         DeleteFile(L"EEStats.log");
     freopen_s(&f, "EEStats.log", "a", stdout);
+    // crash if anything use it ! freopen_s(&f, "EEStats.log", "a", stderr);
 #endif // DEBUG
-
 
     showMessage("Attach!", "DllMain");
 
@@ -39,17 +44,22 @@ bool __stdcall Attach(HMODULE hModule)
 
     auto initLamda = [](void* data) -> unsigned int __stdcall
     {
-        HMODULE* si = static_cast<HMODULE *>(data);
-        lib = new Library(*si);
+        try {
+            lib = new Library();
+        }
+        catch (std::exception ex) {
+            showMessage(std::string(ex.what()), "DllMain", 1);
+            return 0;
+        }
         showMessage("Library Initialized!", "DllMain");
         lib->PrintCredits();
         lib->UpdateAttachRoutine();
         lib->StartLibraryThread();
-        return 0;
+        return 1;
     };
 
     showMessage("Starting Library Thread!", "DllMain");
-    HANDLE initThreadHandle = (HANDLE)_beginthreadex(0, 0, initLamda, &hModule, 0, 0);
+    HANDLE initThreadHandle = (HANDLE)_beginthreadex(0, 0, initLamda, 0, 0, 0);
 
     return true;
 }
@@ -64,7 +74,7 @@ bool __stdcall Detach()
         if (GetConsoleWindow())
             FreeConsole();
 #ifdef _DEBUG
-        Sleep(5000); // Keep the console open for 5s (if not killed before) to read output if required
+        // Sleep(5000); // Keep the console open for 5s (if not killed before) to read output if required
 #endif
         return true;
     }

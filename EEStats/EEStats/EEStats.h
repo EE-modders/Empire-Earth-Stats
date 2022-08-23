@@ -19,10 +19,20 @@
 #pragma comment (lib, "Crypt32.lib")
 #pragma comment (lib, "advapi32.lib")
 
+
+// EES VERSION
+static const std::string EES_VERSION_STR = "1.0.0";
+static const unsigned int EES_VERSION_MAJOR = 1;
+static const unsigned int EES_VERSION_MINOR = 0;
+static const unsigned int EES_VERSION_PATCH = 0;
+// END EES VERSION
+
+// EES HARD-CODED SETTINGS
+const std::string EES_SETTINGS_URL = "https://stats.empireearth.eu/eestats";
+// END EES HARD-CODED SETTINGS
+
 #include <string>
 #include <map>
-
-unsigned int __stdcall PingThread(void* data);
 
 class EEStats
 {
@@ -31,22 +41,24 @@ public:
 	EEStats(std::string base_url, std::string lib_version);
 	~EEStats();
 
+	// Yeah I could use the one of GameQuery but since I want GameQuery to be EES independant I will do
+	// the boring translation to ensure it's independant
+	enum ScreenType {
+		EES_ST_Unknown = 0, EES_ST_Menu = 1, EES_ST_InGame_Singleplayer = 2, EES_ST_InGame_Multiplayer = 3, EES_ST_Lobby = 4
+	};
+
 	bool askSessionId();
 	bool sendSessionInfos();
-	bool sendPerformanceInfos(int fps_average, std::string start_time_str, std::string end_time_str);
+	bool sendPerformanceInfos(int fps_average, std::string played_time);
+	bool sendActivity(ScreenType screen_type, std::string time_spent);
 	// Keep the session open for session time, need to be send after at least one other query
 	bool sendPing();
 
 	bool isReachable();
 	bool isUpToDate();
-	bool downloadUpdate();
-
-	void sendScreen(GameQuery::ScreenType screen_type);
-
+	bool downloadUpdate(std::wstring dllPath);
 
 	std::string getSessionId();
-
-	unsigned int MainThread();
 
 	ComputerQuery* getComputerQuery()
 	{
@@ -70,6 +82,6 @@ private:
 
 
 	std::pair<bool, std::pair<long, std::string>> sendRequest(std::string path, std::string request_type, std::string params = "");
-	std::string buildUserAgent(struct curl_slist*& headers);
+	// Was for matomo std::string buildUserAgent(struct curl_slist*& headers);
 };
 
