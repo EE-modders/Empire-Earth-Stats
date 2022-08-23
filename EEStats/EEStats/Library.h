@@ -45,18 +45,26 @@ public:
 
     void PrintCredits()
     {
-        showMessage("--------------------------------------------------");
+        showMessage("------------------------------------------------------");
         showMessage("  Empire Earth Stats v" + EES_VERSION_STR);
         showMessage("  By EnergyCube for the Empire Earth Community");
         showMessage("  This project is Open-Source under GNU GPL v3");
-        showMessage("--------------------------------------------------");
+        showMessage("------------------------------------------------------");
         showMessage("  Credits:");
         showMessage("    zocker_160 (would be impossible without him)");
         showMessage("    cURL: https://curl.se/");
         showMessage("    sha512.h: Stefan Wilhelm, sha1.h: Steve Rei");
-        showMessage("--------------------------------------------------");
-    }
+        showMessage("------------------------------------------------------");
 
+        if (_ees != nullptr && _ees->getComputerQuery() != nullptr) {
+            showMessage("  You can ask anytime to access/delete your data");
+            showMessage("  For more information, please visit:");
+            showMessage("    https://github.com/EE-modders/Empire-Earth-Stats");
+            showMessage("  Your Empire Earth Stats Computer ID is:");
+            showMessage("    " + _ees->getComputerQuery()->getUID());
+            showMessage("------------------------------------------------------");
+        }
+    }
 
     void UpdateAttachRoutine()
     {

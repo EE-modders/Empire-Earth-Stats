@@ -54,7 +54,11 @@ bool EEStats::askSessionId()
                 args << ";";
         }
     }
+
+#ifdef _DEBUG
     std::cout << args.str() << std::endl;
+#endif
+
     auto user_request = sendRequest("user.php", "POST", args.str());
     if (!user_request.first)
         return false;
@@ -181,7 +185,10 @@ bool EEStats::sendSessionInfos()
     if (!params.empty())
         args << "&dx_wrapper_settings=" << params;
 
+#ifdef _DEBUG
     std::cout << args.str() << std::endl;
+#endif
+
     auto user_request = sendRequest("session.php", "POST", args.str());
     if (!user_request.first)
         return false;
@@ -237,7 +244,10 @@ bool EEStats::sendPerformanceInfos(int fps_average, std::string played_time)
     if (gameRes.cx != 0 || gameRes.cy != 0)
         args << "&game_resolution=" << gameRes.cx << "x" << gameRes.cy;
 
+#ifdef _DEBUG
     std::cout << args.str() << std::endl;
+#endif
+
     auto user_request = sendRequest("performance.php", "POST", args.str());
     if (!user_request.first)
         return false;
@@ -265,7 +275,11 @@ bool EEStats::isUpToDate()
 {
     std::stringstream args;
     args << "version=" << EES_VERSION_STR;
+
+#ifdef _DEBUG
     std::cout << args.str() << std::endl;
+#endif
+
     auto user_request = sendRequest("", "POST", args.str());
 
     if (!user_request.first)
@@ -309,7 +323,10 @@ bool EEStats::sendActivity(ScreenType screen_type, std::string time_spent)
     args << "&screen_type=" << (uint16_t) screen_type;
     args << "&time_spent=" << time_spent;
 
+#ifdef _DEBUG
     std::cout << args.str() << std::endl;
+#endif
+
     auto user_request = sendRequest("activity.php", "POST", args.str());
     if (!user_request.first)
         return false;
@@ -329,7 +346,11 @@ bool EEStats::sendPing()
 
     std::stringstream args;
     args << "session_uuid=" << _session_id;
+
+#ifdef _DEBUG
     std::cout << args.str() << std::endl;
+#endif
+
     auto user_request = sendRequest("session.php", "PATCH", args.str());
     if (!user_request.first)
         return false;
