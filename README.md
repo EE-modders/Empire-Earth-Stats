@@ -28,12 +28,13 @@ Doing a file checksum on the game binary seems to give bad result (probably beca
 
 ## 💡 Ideas / TODO
 Fix [Known Limitation](https://github.com/EE-modders/Empire-Earth-Stats#-known-limitation) \
-Detect install way (Sierra, Community Setup, GOG, etc...) and report the setup version
+Detect install way (Sierra, Community Setup, GOG, etc...) and report the setup version \
+Create a config file to allow Computer ID to be anonymized and/or specific reports to be disabled (or disable entirely the DLL). 
 
 ## 📖 License
 [GNU General Public License v3.0](https://github.com/EE-modders/Empire-Earth-Launcher/blob/main/LICENSE)
 
 ## ❤️ Credit
-zocker_160
+[zocker_160](https://github.com/zocker-160)
 cURL (License: https://github.com/curl/curl/blob/master/COPYING, Website: https://curl.se/) \
 sha512.h (License: BSD, Author: Stefan Wilhelm), sha1.h (License: "public domain", Author: Steve Reid)
