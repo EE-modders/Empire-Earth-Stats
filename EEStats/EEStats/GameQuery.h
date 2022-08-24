@@ -10,23 +10,24 @@ public:
 	GameQuery();
 
 	enum ProductType {
+		PT_Unknown,
 		PT_EE,
-		PT_AoC,
-		PT_Unknown
+		PT_AoC
 	};
 
 	enum ScreenType {
+		ST_Unknown,
 		ST_Menu,
 		ST_PlayingSolo,
 		ST_PlayingOnline,
 		ST_Lobby,
-		ST_Editor,				// Unable to detect yet :[
-		ST_Unknown
+		ST_ScenarioEditor
 	};
 
 	bool isLoaded();
 	bool isPlaying();
 	bool inLobby();
+	bool inScenarioEditor();
 
 	bool isMinimized(); // WARNING: The debug console is also considered as the game Window
 	bool isElevated();

@@ -21,10 +21,10 @@
 
 
 // EES VERSION
-static const std::string EES_VERSION_STR = "1.0.0";
+static const std::string EES_VERSION_STR = "1.0.1";
 static const unsigned int EES_VERSION_MAJOR = 1;
 static const unsigned int EES_VERSION_MINOR = 0;
-static const unsigned int EES_VERSION_PATCH = 0;
+static const unsigned int EES_VERSION_PATCH = 1;
 // END EES VERSION
 
 // EES HARD-CODED SETTINGS
@@ -44,7 +44,8 @@ public:
 	// Yeah I could use the one of GameQuery but since I want GameQuery to be EES independant I will do
 	// the boring translation to ensure it's independant
 	enum ScreenType {
-		EES_ST_Unknown = 0, EES_ST_Menu = 1, EES_ST_InGame_Singleplayer = 2, EES_ST_InGame_Multiplayer = 3, EES_ST_Lobby = 4
+		EES_ST_Unknown = 0, EES_ST_Menu = 1, EES_ST_InGame_Singleplayer = 2, EES_ST_InGame_Multiplayer = 3, EES_ST_Lobby = 4,
+		EES_ST_Scenario_Editor = 5
 	};
 
 	bool askSessionId();

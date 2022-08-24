@@ -10,6 +10,10 @@
 #include <string>
 #include <regex>
 
+#include <mutex>
+
+static std::mutex mtx;
+
 static void trim(std::string& s) {
     s.erase(s.begin(), std::find_if_not(s.begin(), s.end(), [](char c) { return std::isspace(c); }));
     s.erase(std::find_if_not(s.rbegin(), s.rend(), [](char c) { return std::isspace(c); }).base(), s.end());
@@ -47,6 +51,7 @@ static const std::string currentDateTime(std::string format) {
 
 static void showMessage(std::string msg, std::string scope = "", bool error = false, bool show_time = true)
 {
+    std::unique_lock<std::mutex> lck(mtx);
     std::stringstream ss;
 
     if (show_time)

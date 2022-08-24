@@ -130,7 +130,6 @@ unsigned int __stdcall PeformanceThread(void* data)
             if (fps < 1.0f) // Skip bad data or simply potato perf
                 continue;
             fpsHistory.push(fps);
-            std::cout << fps << std::endl;
         }
         else if (wasPlaying) {
             showMessage("Back to menu, calculating performance history...", "PeformanceThread");
@@ -156,8 +155,6 @@ unsigned int __stdcall PeformanceThread(void* data)
                 timePlayed -= minutes;
                 auto seconds = std::chrono::duration_cast<std::chrono::seconds>(timePlayed);
                 timePlayed -= seconds;
-
-                ss << hours.count() << ":" << minutes.count() << ":" << seconds.count();
 
                 if (ees->sendPerformanceInfos((int)moy, ss.str()))
                     showMessage("Performance history sent!", "PeformanceThread");
@@ -211,6 +208,9 @@ unsigned int __stdcall ActivityThread(void* data)
                 break;
             case GameQuery::ST_PlayingSolo:
                 eesScreenType = EEStats::ScreenType::EES_ST_InGame_Singleplayer;
+                break;
+            case GameQuery::ST_ScenarioEditor:
+                eesScreenType = EEStats::ScreenType::EES_ST_Scenario_Editor;
                 break;
             case GameQuery::ST_Unknown:
             default:
@@ -268,12 +268,11 @@ void Library::StartLibraryThread()
         showMessage("Update found! Downloading update...", "LibraryThread");
         if (_ees->downloadUpdate(getDllPath())) {
             showMessage("Update downloaded! Waiting for game restart...", "LibraryThread");
-            return;
         }
         else {
             showMessage("Unable to download update, exiting...", "LibraryThread", true);
-            return;
         }
+        return;
     }
 
     if (gq == nullptr || cq == nullptr) {
@@ -293,16 +292,9 @@ void Library::StartLibraryThread()
     */
 
     if (!cq->isWine() && cq->getWindowsVersionCQ() < ComputerQuery::WinVista) {
-        showMessage("Sorry EE Stats work from Windows Vista.", "LibraryThread", true);
+        showMessage("Sorry EE Stats work from Windows Vista.", "LibraryThread", true); // I mean technically cURL seems to require Vista
         return;
     }
-
-    // https://github.com/EnergyCube/RolePlay_Notes/releases/latest/download/setup.exe
-    /*if (_ees->downloadFile("https://storage.empireearth.eu/EEStats.dll", "EEStats.dll.update")) {
-        showMessage("Update Downloaded!", "MainThread");
-        Sleep(5000);
-        return 1;
-    }*/
 
     showMessage("Product Type: " + std::to_string(gq->getProductType()), "LibraryThread");
     if (gq->getProductType() == GameQuery::PT_Unknown) {
@@ -314,6 +306,12 @@ void Library::StartLibraryThread()
         return;
     }
 
+    showMessage("Game Base: " + std::string(gq->getGameBaseVersion()), "LibraryThread");
+    if (!gq->isSupportedVersion()) {
+        showMessage("Your game version isn't supported...", "LibraryThread", true);
+        return;
+    }
+    // Register hook before game load
     gq->setVersionSuffix(" (EE Stats v1.0.0)"); // TODO: A shared lib :V (.lib ? or .dll ? idk)
 
     showMessage("Waiting for the game to fully load...", "LibraryThread");
@@ -321,15 +319,9 @@ void Library::StartLibraryThread()
         Sleep(100);
     showMessage("Game Loaded!", "LibraryThread");
 
-    showMessage("Game Base: " + std::string(gq->getGameBaseVersion()), "LibraryThread");
     showMessage("Game Data: " + std::string(gq->getGameDataVersion()), "LibraryThread");
-    if (!gq->isSupportedVersion()) {
-        showMessage("Your game version isn't supported, stats about specific game feature are disabled...", "LibraryThread", true);
-        //ees->askSessionId();
-        return; // The ping clock will still run so we can track the session time
-    }
 
-    showMessage("Asking a session id for current session...", "LibraryThread");
+    showMessage("Asking a session id for the current session...", "LibraryThread");
     if (!_ees->askSessionId()) {
         showMessage("Unable to get a session id!", "LibraryThread");
         return;
@@ -343,9 +335,9 @@ void Library::StartLibraryThread()
     }
     showMessage("Session infos sent sucessfully...", "LibraryThread");
 
-    HANDLE pingThreadHandle = (HANDLE) _beginthreadex(0, 0, PingThread, _ees, 0, 0);
-    HANDLE perfThreadHandle = (HANDLE) _beginthreadex(0, 0, PeformanceThread, _ees, 0, 0);
-    HANDLE screenThreadHandle = (HANDLE) _beginthreadex(0, 0, ActivityThread, _ees, 0, 0);
+    HANDLE pingThreadHandle = (HANDLE)_beginthreadex(0, 0, PingThread, _ees, 0, 0);
+    HANDLE perfThreadHandle = (HANDLE)_beginthreadex(0, 0, PeformanceThread, _ees, 0, 0);
+    HANDLE screenThreadHandle = (HANDLE)_beginthreadex(0, 0, ActivityThread, _ees, 0, 0);
 
     showMessage("Exit Thread!", "LibraryThread");
 }
