@@ -175,9 +175,11 @@ bool EEStats::sendSessionInfos()
 
     // DX Wrapper
     showMessage("Recovering DirectX and DirectX Wrapper...", "EEStats");
-    auto major = cq->getDirectX_MajorVersion();
-    if (major != 0)
-        args << "&dx_major_version=" << major;
+    if (!cq->isWine()) {
+        auto major = cq->getDirectX_MajorVersion();
+        if (major != 0)
+            args << "&dx_major_version=" << major;
+    }
     auto wrapper = cq->getDirectX_WrapperVersion();
     if (!wrapper.empty())
         args << "&dx_wrapper_version=" << wrapper;
@@ -365,7 +367,6 @@ std::string EEStats::getSessionId()
 {
     return _session_id;
 }
-
 
 static size_t WriteData(void* ptr, size_t size, size_t nmemb, void* stream)
 {
