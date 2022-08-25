@@ -13,7 +13,7 @@ class ComputerQuery
 	// TODO: Maybe cache those info or cache the infos
 
 public:
-	ComputerQuery::ComputerQuery();
+	ComputerQuery();
 
 	// Memory
 	float getRAM();

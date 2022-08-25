@@ -7,19 +7,19 @@
 EEStats::EEStats(std::string base_url, std::string lib_version) :
     _base_url(base_url), _lib_version(lib_version)
 {
-    showMessage("Init global cURL...", "EEStats");
+    Logger::showMessage("Init global cURL...", "EEStats");
     if (curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK)
         throw std::exception("Unable to init cURL!");
     if (_base_url.at(_base_url.length() - 1) != '/')
         _base_url += '/';
-    showMessage("cURL global loaded!", "EEStats");
+    Logger::showMessage("cURL global loaded!", "EEStats");
 }
 
 EEStats::~EEStats()
 {
-    showMessage("Clean-up global cURL...", "EEStats");
+    Logger::showMessage("Clean-up global cURL...", "EEStats");
     curl_global_cleanup();
-    showMessage("Cleaned-up global cURL!", "EEStats");
+    Logger::showMessage("Cleaned-up global cURL!", "EEStats");
 }
 
 bool EEStats::askSessionId()
@@ -29,11 +29,11 @@ bool EEStats::askSessionId()
     // UID
     std::string uid = _cq->getUID();
     if (uid.empty()) {
-        showMessage("Unable to ask a session id because the user uid is empty!", "EEStats", true);
+        Logger::showMessage("Unable to ask a session id because the user uid is empty!", "EEStats", true);
         return false;
     }
     else if (uid.length() != 128) {
-        showMessage("User uid seems invalid!", "EEStats", true);
+        Logger::showMessage("User uid seems invalid!", "EEStats", true);
         return false;
     }
     args << "user_uid=" << uid;
@@ -63,17 +63,17 @@ bool EEStats::askSessionId()
     if (!user_request.first)
         return false;
     if (user_request.second.first < 200 || user_request.second.first >= 300) {
-        showMessage("Invalid HTTP code when asking a session id!", "EEStats", true);
+        Logger::showMessage("Invalid HTTP code when asking a session id!", "EEStats", true);
         return false;
     }
     _session_id = user_request.second.second;
-    return !_session_id.empty();
+    return _session_id.length() == 36;
 }
 
 bool EEStats::sendSessionInfos()
 {
     if (_session_id.empty()) {
-        showMessage("Unable to send the session infos because the session uuid is empty!", "EEStats", true);
+        Logger::showMessage("Unable to send the session infos because the session uuid is empty!", "EEStats", true);
         return false;
     }
 
@@ -84,14 +84,14 @@ bool EEStats::sendSessionInfos()
     args << "session_uuid=" << _session_id;
 
     // Game
-    showMessage("Recovering Game Infos...", "EEStats");
+    Logger::showMessage("Recovering Game Infos...", "EEStats");
     args << "&game_base_version=" << gq->getGameBaseVersion();
     args << "&game_data_version=" << gq->getGameDataVersion();
     args << "&game_is_expansion=" << ((gq->getProductType() == GameQuery::ProductType::PT_AoC) ? "1" : "0");
     args << "&game_is_elevated=" << gq->isElevated() ? "1" : "0";
 
     // WON
-    showMessage("Recovering WON Infos...", "EEStats");
+    Logger::showMessage("Recovering WON Infos...", "EEStats");
     auto won_product = gq->getWONProductName();
     if (!won_product.empty())
         args << "&won_product_name=" << won_product;
@@ -103,7 +103,7 @@ bool EEStats::sendSessionInfos()
         args << "&won_product_version=" << won_product_ver;
 
     // GPU
-    showMessage("Recovering GPU Infos...", "EEStats");
+    Logger::showMessage("Recovering GPU Infos...", "EEStats");
     auto dev = cq->getGraphicDeviceId();
     if (!dev.empty())
         args << "&gpu_device=" << dev;
@@ -129,7 +129,7 @@ bool EEStats::sendSessionInfos()
         args << "&gpu_dedicated_memory=" << extremRound(gpu_dedicated_memory);
 
     // CPU
-    showMessage("Recovering CPU Infos...", "EEStats");
+    Logger::showMessage("Recovering CPU Infos...", "EEStats");
     auto cpu_id = cq->getProcessorId();
     if (!cpu_id.empty())
         args << "&cpu_id=" << cpu_id;
@@ -146,13 +146,13 @@ bool EEStats::sendSessionInfos()
         args << "&cpu_architecture=" << cpu_arch;
 
     // RAM
-    showMessage("Recovering RAM Infos...", "EEStats");
+    Logger::showMessage("Recovering RAM Infos...", "EEStats");
     auto ram_size = extremRound(cq->getRAM());
     if (!ram_size.empty())
         args << "&ram_size=" << ram_size;
 
     // OS
-    showMessage("Recovering OS Infos...", "EEStats");
+    Logger::showMessage("Recovering OS Infos...", "EEStats");
     std::string os_name = cq->isWine() ? "Wine" : cq->getWindowsName();
     if (!os_name.empty()) {
         trim(os_name);
@@ -167,14 +167,14 @@ bool EEStats::sendSessionInfos()
     args << "&os_virtual_machine=" << cq->runInVM() ? "1" : "0";
 
     // Screen
-    showMessage("Recovering Screen Infos...", "EEStats");
+    Logger::showMessage("Recovering Screen Infos...", "EEStats");
     auto size = cq->getWindowsResolution();
     auto screen_resolution = std::to_string(size.cx) + "x" + std::to_string(size.cy);
     if (!screen_resolution.empty())
         args << "&screen_resolution=" << screen_resolution;
 
     // DX Wrapper
-    showMessage("Recovering DirectX and DirectX Wrapper...", "EEStats");
+    Logger::showMessage("Recovering DirectX and DirectX Wrapper...", "EEStats");
     if (!cq->isWine()) {
         auto major = cq->getDirectX_MajorVersion();
         if (major != 0)
@@ -195,7 +195,7 @@ bool EEStats::sendSessionInfos()
     if (!user_request.first)
         return false;
     if (user_request.second.first < 200 || user_request.second.first >= 300) {
-        showMessage("Invalid HTTP code when sending session infos!", "EEStats", true);
+        Logger::showMessage("Invalid HTTP code when sending session infos!", "EEStats", true);
         return false;
     }
     return true;
@@ -205,15 +205,15 @@ bool EEStats::sendSessionInfos()
 bool EEStats::sendPerformanceInfos(int fps_average, std::string played_time)
 {
     if (_session_id.empty()) {
-        showMessage("Unable to send the performance infos because the session uuid is empty!", "EEStats", true);
+        Logger::showMessage("Unable to send the performance infos because the session uuid is empty!", "EEStats", true);
         return false;
     }
     else if (fps_average <= 0) {
-        showMessage("Unable to send the performance infos because the average fps is invalid!", "EEStats", true);
+        Logger::showMessage("Unable to send the performance infos because the average fps is invalid!", "EEStats", true);
         return false;
     }
     else if (played_time.empty() || played_time.compare("0:0:0") == 0) {
-        showMessage("Unable to send the performance infos because the played time is invalid!", "EEStats", true);
+        Logger::showMessage("Unable to send the performance infos because the played time is invalid!", "EEStats", true);
         return false;
     }
 
@@ -225,7 +225,7 @@ bool EEStats::sendPerformanceInfos(int fps_average, std::string played_time)
 
     args << "&played_time=" << played_time;
 
-    showMessage("Recovering Game Infos...", "EEStats");
+    Logger::showMessage("Recovering Game Infos...", "EEStats");
     args << "&singleplayer=" << !gq->inLobby();
 
     auto params = gq->getGPURasterizerName();
@@ -254,7 +254,7 @@ bool EEStats::sendPerformanceInfos(int fps_average, std::string played_time)
     if (!user_request.first)
         return false;
     if (user_request.second.first < 200 || user_request.second.first >= 300) {
-        showMessage("Invalid HTTP code when sending performance infos!", "EEStats", true);
+        Logger::showMessage("Invalid HTTP code when sending performance infos!", "EEStats", true);
         return false;
     }
     return true;
@@ -267,7 +267,7 @@ bool EEStats::isReachable()
     if (!user_request.first)
         return false;
     if (user_request.second.first < 200 || user_request.second.first >= 300) {
-        showMessage("Invalid HTTP when trying to check if server is reachable!", "EEStats", true);
+        Logger::showMessage("Invalid HTTP when trying to check if server is reachable!", "EEStats", true);
         return false;
     }
     return true;
@@ -287,10 +287,10 @@ bool EEStats::isUpToDate()
     if (!user_request.first)
         return false;
     if (user_request.second.first < 200 && user_request.second.first >= 300) {
-        showMessage("Invalid HTTP code when checking if up to date!", "EEStats", true);
+        Logger::showMessage("Invalid HTTP code when checking if up to date!", "EEStats", true);
         return false;
     }
-    return user_request.second.second.compare("true") == 0;
+    return user_request.second.second.compare("false") != 0;
 }
 
 bool EEStats::downloadUpdate(std::wstring dllPath)
@@ -300,16 +300,16 @@ bool EEStats::downloadUpdate(std::wstring dllPath)
     if (!user_request.first)
         return false;
     if (user_request.second.first < 200 || user_request.second.first >= 300) {
-        showMessage("Invalid HTTP code when getting update url!", "EEStats", true);
+        Logger::showMessage("Invalid HTTP code when getting update url!", "EEStats", true);
         return false;
     }
 
     if (downloadFile(user_request.second.second, utf16ToUtf8(dllPath + L".update"))) {
-        showMessage("Update downloaded!", "EEStats");
+        Logger::showMessage("Update downloaded!", "EEStats");
         return true;
     }
     else {
-        showMessage("Unable to download update!", "EEStats", true);
+        Logger::showMessage("Unable to download update!", "EEStats", true);
         return false;
     }
 }
@@ -317,7 +317,7 @@ bool EEStats::downloadUpdate(std::wstring dllPath)
 bool EEStats::sendActivity(ScreenType screen_type, std::string time_spent)
 {
     if (_session_id.empty()) {
-        showMessage("Unable to send activity because the session uuid is empty!", "EEStats", true);
+        Logger::showMessage("Unable to send activity because the session uuid is empty!", "EEStats", true);
         return false;
     }
     std::stringstream args;
@@ -333,7 +333,7 @@ bool EEStats::sendActivity(ScreenType screen_type, std::string time_spent)
     if (!user_request.first)
         return false;
     if (user_request.second.first < 200 || user_request.second.first >= 300) {
-        showMessage("Invalid HTTP code when sending activity!", "EEStats", true);
+        Logger::showMessage("Invalid HTTP code when sending activity!", "EEStats", true);
         return false;
     }
     return true;
@@ -342,7 +342,7 @@ bool EEStats::sendActivity(ScreenType screen_type, std::string time_spent)
 bool EEStats::sendPing()
 {
     if (_session_id.empty()) {
-        showMessage("Unable to send the session ping because the session uuid is empty!", "EEStats", true);
+        Logger::showMessage("Unable to send the session ping because the session uuid is empty!", "EEStats", true);
         return false;
     }
 
@@ -357,7 +357,7 @@ bool EEStats::sendPing()
     if (!user_request.first)
         return false;
     if (user_request.second.first < 200 || user_request.second.first >= 300) {
-        showMessage("Invalid HTTP code when sending session ping!", "EEStats", true);
+        Logger::showMessage("Invalid HTTP code when sending session ping!", "EEStats", true);
         return false;
     }
     return true;
@@ -416,7 +416,7 @@ bool EEStats::downloadFile(std::string path, std::string file)
 
     curl_easy_cleanup(curl_handle);
 
-    return hr == 0 ? res == CURLE_OK : false;
+    return hr == 0 ? (res == CURLE_OK && fileSize(utf8ToUtf16(file).c_str()) != 0) : false;
 }
 
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
@@ -432,7 +432,7 @@ std::pair<bool, std::pair<long, std::string>> EEStats::sendRequest(std::string p
     long replyCode;
 
     if (request_type.empty()) {
-        showMessage("Request type not defined!! Cancelling request...", "EEStats", true);
+        Logger::showMessage("Request type not defined!! Cancelling request...", "EEStats", true);
         return { false, { 0, "" } };
     }
     
@@ -471,16 +471,16 @@ std::pair<bool, std::pair<long, std::string>> EEStats::sendRequest(std::string p
     if (res != CURLE_OK) {
         std::stringstream sscUrlFail;
         sscUrlFail << "curl_easy_perform() failed: " << curl_easy_strerror(res);
-        showMessage(sscUrlFail.str(), "EEStats", true);
+        Logger::showMessage(sscUrlFail.str(), "EEStats", true);
     }
     else {
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &replyCode);
-        showMessage("Got response from server: HTTP Code: " +
+        Logger::showMessage("Got response from server: HTTP Code: " +
             std::to_string(replyCode) +
             " | Reply length: " + std::to_string(replyTxt.length()), "EEStats");
 #ifdef _DEBUG
         if (!replyTxt.empty())
-            showMessage("Reply: " + replyTxt, "EEStats");
+            Logger::showMessage("Reply: " + replyTxt, "EEStats");
 #endif
     }
     curl_easy_cleanup(curl);

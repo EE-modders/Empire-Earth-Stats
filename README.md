@@ -1,7 +1,8 @@
 ![Visitor count](https://shields-io-visitor-counter.herokuapp.com/badge?page=EE-modders.Empire-Earth-Stats)
-[![GitHub stars](https://img.shields.io/github/stars/EE-modders/Empire-Earth-Setup)](https://github.com/EE-modders/Empire-Earth-Stats/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/EE-modders/Empire-Earth-Setup)](https://github.com/EE-modders/Empire-Earth-Stats/network)
-[![Setup Version](https://img.shields.io/badge/Empire%20Earth%20Stats%20Version-v1.0.0-blue)](https://github.com/EE-modders/Empire-Earth-Stats)
+[![Stars](https://img.shields.io/github/stars/EE-modders/Empire-Earth-Stats)](https://github.com/EE-modders/Empire-Earth-Stats/stargazers)
+[![Forks](https://img.shields.io/github/forks/EE-modders/Empire-Earth-Stats)](https://github.com/EE-modders/Empire-Earth-Stats/network)
+[![Release](https://img.shields.io/github/v/release/EE-modders/Empire-Earth-Stats?label=last%20release%20)](https://github.com/EE-modders/Empire-Earth-Stats)
+[![License](https://img.shields.io/github/license/EE-modders/Empire-Earth-Stats?color=brightgreen)](https://github.com/EE-modders/Empire-Earth-Stats/blob/master/LICENSE)
 # 📊 Empire Earth Stats
 A brand new way to get EE statistics! Open-Source and [GDPR](https://ec.europa.eu/info/law/law-topic/data-protection/data-protection-eu_en) compliant! \
 By [EnergyCube](https://github.com/EnergyCube) for the Empire Earth Community.
@@ -48,4 +49,4 @@ cURL (License: https://github.com/curl/curl/blob/master/COPYING, Website: https:
 sha512.h (License: BSD, Author: Stefan Wilhelm), sha1.h (License: "public domain", Author: Steve Reid)
 
 ## 📖 License
-[GNU General Public License v3.0](https://github.com/EE-modders/Empire-Earth-Stats/blob/master/README.md)
+[GNU General Public License v3.0](https://github.com/EE-modders/Empire-Earth-Stats/blob/master/LICENSE)

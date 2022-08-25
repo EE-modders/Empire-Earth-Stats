@@ -149,6 +149,7 @@
     <ClInclude Include="Library.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="GameQuery.h" />
+    <ClInclude Include="Logger.h" />
     <ClInclude Include="MemoryHelper.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="sha1.h" />

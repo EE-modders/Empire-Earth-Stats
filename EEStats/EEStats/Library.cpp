@@ -7,12 +7,12 @@
 
 unsigned int __stdcall PingThread(void* data)
 {
-    showMessage("Enter Thread!", "PingThread");
+    Logger::showMessage("Enter Thread!", "PingThread");
 
     EEStats* ees = static_cast<EEStats*>(data);
 
     if (ees == nullptr) {
-        showMessage("Unable to recover EEStats instance!!!", "PingThread");
+        Logger::showMessage("Unable to recover EEStats instance!!!", "PingThread");
         return 0;
     }
 
@@ -21,14 +21,14 @@ unsigned int __stdcall PingThread(void* data)
         Sleep(600000); // 600000
 
         if (!ees->sendPing()) {
-            showMessage("Unable to send ping! The process or computer was probably sleeping and the session timed out!", "PingThread", true);
+            Logger::showMessage("Unable to send ping! The process or computer was probably sleeping and the session timed out!", "PingThread", true);
             break;
         }
         else {
-            showMessage("Ping sent!", "PingThread");
+            Logger::showMessage("Ping sent!", "PingThread");
         }
     }
-    showMessage("Exit Thread!", "PingThread"); // Will sadly never work...
+    Logger::showMessage("Exit Thread!", "PingThread"); // Will sadly never work...
     return 1;
 }
 
@@ -93,7 +93,7 @@ unsigned int __stdcall PingThread(void* data)
 
 unsigned int __stdcall PeformanceThread(void* data)
 {
-    showMessage("Enter Thread!", "PeformanceThread");
+    Logger::showMessage("Enter Thread!", "PeformanceThread");
 
     EEStats* ees = static_cast<EEStats*>(data);
     GameQuery* gq = ees->getGameQuery();
@@ -105,12 +105,12 @@ unsigned int __stdcall PeformanceThread(void* data)
     std::chrono::high_resolution_clock::time_point t_start = std::chrono::high_resolution_clock::now();
     
     if (doesFileExist(L"neoee.dll")) { // Worst way ever to check it lol
-        showMessage("NeoEE detected, the game binary has been hardly modified ! Cancelling performance tracking to avoid crash.", "PeformanceThread");
+        Logger::showMessage("NeoEE detected, the game binary has been hardly modified ! Cancelling performance tracking to avoid crash.", "PeformanceThread");
         return 0;
     }
 
     if (ees == nullptr || gq == nullptr) {
-        showMessage("Unable to recover EEStats or GameQuery instance!!!", "PeformanceThread");
+        Logger::showMessage("Unable to recover EEStats or GameQuery instance!!!", "PeformanceThread");
         return 0;
     }
 
@@ -132,11 +132,11 @@ unsigned int __stdcall PeformanceThread(void* data)
             fpsHistory.push(fps);
         }
         else if (wasPlaying) {
-            showMessage("Back to menu, calculating performance history...", "PeformanceThread");
+            Logger::showMessage("Back to menu, calculating performance history...", "PeformanceThread");
 
             if (fpsHistory.size() >= (int) ((float) minTimePlayedToSend / (float) updateInterval))
             {
-                showMessage("Sending performance history...", "PeformanceThread");
+                Logger::showMessage("Sending performance history...", "PeformanceThread");
 
                 float moy = 0;
                 int totalElem = fpsHistory.size();
@@ -145,7 +145,7 @@ unsigned int __stdcall PeformanceThread(void* data)
                     fpsHistory.pop();
                 }
 
-                showMessage("Sending performance history...", "PeformanceThread");
+                Logger::showMessage("Sending performance history...", "PeformanceThread");
 
                 std::stringstream ss;
                 auto timePlayed = std::chrono::high_resolution_clock::now() - t_start;
@@ -157,12 +157,12 @@ unsigned int __stdcall PeformanceThread(void* data)
                 timePlayed -= seconds;
 
                 if (ees->sendPerformanceInfos((int)moy, ss.str()))
-                    showMessage("Performance history sent!", "PeformanceThread");
+                    Logger::showMessage("Performance history sent!", "PeformanceThread");
                 else
-                    showMessage("Failed to send performance history!", "PeformanceThread", true);
+                    Logger::showMessage("Failed to send performance history!", "PeformanceThread", true);
             }
             else {
-                showMessage("Not enough data to send performance history, cleaning performance history...", "PeformanceThread");
+                Logger::showMessage("Not enough data to send performance history, cleaning performance history...", "PeformanceThread");
                 while (!fpsHistory.empty())
                     fpsHistory.pop();
             }
@@ -170,7 +170,7 @@ unsigned int __stdcall PeformanceThread(void* data)
             wasPlaying = false;
         }
     }
-    showMessage("Exit Thread!", "PeformanceThread"); // Will sadly never work...
+    Logger::showMessage("Exit Thread!", "PeformanceThread"); // Will sadly never work...
     return 1;
 }
 
@@ -184,7 +184,7 @@ unsigned int __stdcall ActivityThread(void* data)
     GameQuery::ScreenType lastScreen = GameQuery::ST_Unknown;
 
     if (ees == nullptr || gq == nullptr) {
-        showMessage("Unable to recover EEStats or GameQuery instance!!!", "ActivityThread");
+        Logger::showMessage("Unable to recover EEStats or GameQuery instance!!!", "ActivityThread");
         return 0;
     }
 
@@ -194,7 +194,7 @@ unsigned int __stdcall ActivityThread(void* data)
 
         if ((lastScreen == GameQuery::ST_Unknown && currentScreen != GameQuery::ST_Unknown) || lastScreen != gq->getCurrentScreen()) {
 
-            showMessage("Converting Screen to EEStats Screen !", "ActivityThread");
+            Logger::showMessage("Converting Screen to EEStats Screen !", "ActivityThread");
             EEStats::ScreenType eesScreenType = EEStats::ScreenType::EES_ST_Unknown;
             switch (lastScreen) {
             case GameQuery::ST_Menu:
@@ -219,7 +219,7 @@ unsigned int __stdcall ActivityThread(void* data)
             }
 
             if (eesScreenType != EEStats::ScreenType::EES_ST_Unknown) {
-                showMessage("Screen changed ! Preparing activity infos...", "ActivityThread");
+                Logger::showMessage("Screen changed ! Preparing activity infos...", "ActivityThread");
                 std::stringstream ss;
                 auto timePlayed = std::chrono::high_resolution_clock::now() - t_start;
                 auto hours = std::chrono::duration_cast<std::chrono::hours>(timePlayed);
@@ -230,11 +230,11 @@ unsigned int __stdcall ActivityThread(void* data)
                 timePlayed -= seconds;
                 ss << hours.count() << ":" << minutes.count() << ":" << seconds.count();
 
-                showMessage("Sending activity infos...", "ActivityThread");
+                Logger::showMessage("Sending activity infos...", "ActivityThread");
                 if (ees->sendActivity(eesScreenType, ss.str()))
-                    showMessage("Activity infos sent!", "ActivityThread");
+                    Logger::showMessage("Activity infos sent!", "ActivityThread");
                 else
-                    showMessage("Failed to send activity infos!", "ActivityThread", true);
+                    Logger::showMessage("Failed to send activity infos!", "ActivityThread", true);
             }
             lastScreen = currentScreen;
             t_start = std::chrono::high_resolution_clock::now();
@@ -242,41 +242,40 @@ unsigned int __stdcall ActivityThread(void* data)
 
         Sleep(5000); // TODO: HOOK !!! A loop to check the screen is disastrous
     }
-    showMessage("Exit Thread!", "ActivityThread"); // Will sadly never work...
+    Logger::showMessage("Exit Thread!", "ActivityThread"); // Will sadly never work...
     return 1;
 }
 
 void Library::StartLibraryThread()
 {
-    showMessage("Enter Thread!", "LibraryThread");
+    if (_ees == nullptr) {
+        Logger::showMessage("Unable to recover EEStats instance!!!", "LibraryThread");
+        return;
+    }
+
     GameQuery* gq = _ees->getGameQuery();
     ComputerQuery* cq = _ees->getComputerQuery();
 
-    if (_ees == nullptr) {
-        showMessage("Unable to recover EEStats instance!!!", "LibraryThread");
-        return;
-    }
-
-    showMessage("Checking if server is reachable...", "LibraryThread");
+    Logger::showMessage("Checking if server is reachable...", "LibraryThread");
     if (!_ees->isReachable()) {
-        showMessage("Unable to reach the server!", "LibraryThread", true);
+        Logger::showMessage("Unable to reach the server!", "LibraryThread", true);
         return;
     }
 
-    showMessage("Checking update...", "LibraryThread");
+    Logger::showMessage("Checking update...", "LibraryThread");
     if (!_ees->isUpToDate()) {
-        showMessage("Update found! Downloading update...", "LibraryThread");
+        Logger::showMessage("Update found! Downloading update...", "LibraryThread");
         if (_ees->downloadUpdate(getDllPath())) {
-            showMessage("Update downloaded! Waiting for game restart...", "LibraryThread");
+            Logger::showMessage("Update downloaded! Waiting for game restart...", "LibraryThread");
         }
         else {
-            showMessage("Unable to download update, exiting...", "LibraryThread", true);
+            Logger::showMessage("Unable to download update, exiting...", "LibraryThread", true);
         }
         return;
     }
 
     if (gq == nullptr || cq == nullptr) {
-        showMessage("Unable to recover GameQuery or ComputerQuery instance!!!", "LibraryThread");
+        Logger::showMessage("Unable to recover GameQuery or ComputerQuery instance!!!", "LibraryThread");
         return;
     }
 
@@ -292,52 +291,52 @@ void Library::StartLibraryThread()
     */
 
     if (!cq->isWine() && cq->getWindowsVersionCQ() < ComputerQuery::WinVista) {
-        showMessage("Sorry EE Stats work from Windows Vista.", "LibraryThread", true); // I mean technically cURL seems to require Vista
+        Logger::showMessage("Sorry EE Stats work from Windows Vista.", "LibraryThread", true); // I mean technically cURL seems to require Vista
         return;
     }
 
-    showMessage("Product Type: " + std::to_string(gq->getProductType()), "LibraryThread");
+    Logger::showMessage("Product Type: " + std::to_string(gq->getProductType()), "LibraryThread");
     if (gq->getProductType() == GameQuery::PT_Unknown) {
-        showMessage("Unable to identify the game product! Did you renamed the executable?", "LibraryThread", true);
+        Logger::showMessage("Unable to identify the game product! Did you renamed the executable?", "LibraryThread", true);
         return;
     }
     else if (gq->getProductType() == GameQuery::PT_AoC) {
-        showMessage("Sorry... AoC isn't supported for the moment.", "LibraryThread", true);
+        Logger::showMessage("Sorry... AoC isn't supported for the moment.", "LibraryThread", true);
         return;
     }
 
-    showMessage("Game Base: " + std::string(gq->getGameBaseVersion()), "LibraryThread");
+    Logger::showMessage("Game Base: " + std::string(gq->getGameBaseVersion()), "LibraryThread");
     if (!gq->isSupportedVersion()) {
-        showMessage("Your game version isn't supported...", "LibraryThread", true);
+        Logger::showMessage("Your game version isn't supported...", "LibraryThread", true);
         return;
     }
     // Register hook before game load
-    gq->setVersionSuffix(" (EE Stats v1.0.0)"); // TODO: A shared lib :V (.lib ? or .dll ? idk)
+    gq->setVersionSuffix(" (EE Stats v" + EES_VERSION_STR + ")"); // TODO: A shared lib :V (.lib ? or .dll ? idk)
 
-    showMessage("Waiting for the game to fully load...", "LibraryThread");
+    Logger::showMessage("Waiting for the game to fully load...", "LibraryThread");
     while (!gq->isLoaded()) // TODO: Hook, because it's better
         Sleep(100);
-    showMessage("Game Loaded!", "LibraryThread");
+    Logger::showMessage("Game Loaded!", "LibraryThread");
 
-    showMessage("Game Data: " + std::string(gq->getGameDataVersion()), "LibraryThread");
+    Logger::showMessage("Game Data: " + std::string(gq->getGameDataVersion()), "LibraryThread");
 
-    showMessage("Asking a session id for the current session...", "LibraryThread");
+    Logger::showMessage("Asking a session id for the current session...", "LibraryThread");
     if (!_ees->askSessionId()) {
-        showMessage("Unable to get a session id!", "LibraryThread");
+        Logger::showMessage("Unable to get a session id!", "LibraryThread", true);
         return;
     }
-    showMessage("Session id for this session is " + _ees->getSessionId(), "LibraryThread");
+    Logger::showMessage("Session id for this session is " + _ees->getSessionId(), "LibraryThread");
 
-    showMessage("Sending current session infos...", "LibraryThread");
+    Logger::showMessage("Sending current session infos...", "LibraryThread");
     if (!_ees->sendSessionInfos()) {
-        showMessage("Unable to send session infos!", "LibraryThread");
+        Logger::showMessage("Unable to send session infos!", "LibraryThread", true);
         return;
     }
-    showMessage("Session infos sent sucessfully...", "LibraryThread");
+    Logger::showMessage("Session infos sent sucessfully...", "LibraryThread");
 
     HANDLE pingThreadHandle = (HANDLE)_beginthreadex(0, 0, PingThread, _ees, 0, 0);
     HANDLE perfThreadHandle = (HANDLE)_beginthreadex(0, 0, PeformanceThread, _ees, 0, 0);
     HANDLE screenThreadHandle = (HANDLE)_beginthreadex(0, 0, ActivityThread, _ees, 0, 0);
 
-    showMessage("Exit Thread!", "LibraryThread");
+    Logger::showMessage("Exit Thread!", "LibraryThread");
 }

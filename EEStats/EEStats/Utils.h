@@ -2,7 +2,6 @@
 
 #include <string>
 #include <sstream>
-#include <iostream>
 #include <codecvt>
 #include <iomanip>
 #include <fstream>
@@ -10,9 +9,31 @@
 #include <string>
 #include <regex>
 
-#include <mutex>
+static std::wstring getDllPath()
+{
+    // Dll Name
+    TCHAR dllPath[MAX_PATH];
+    HMODULE hModule;
+    // Passing a static function to recover the DLL Module Handle
+    if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPWSTR)&getDllPath, &hModule)) {
+        throw std::exception("Unable to get module handle of an internal function");
+    }
+    else {
+        GetModuleFileName(hModule, dllPath, MAX_PATH);
+    }
+    return std::wstring(dllPath);
+}
 
-static std::mutex mtx;
+static std::wstring getFileName(std::wstring& path, bool withExtention)
+{
+    // path.substr(path.find_last_of("/\\") + 1);
+    std::wstring result = path.substr(path.find_last_of(L"/\\") + 1);
+    if (!withExtention)
+        result = result.substr(0, result.find_last_of('.'));
+    return result;
+}
 
 static void trim(std::string& s) {
     s.erase(s.begin(), std::find_if_not(s.begin(), s.end(), [](char c) { return std::isspace(c); }));
@@ -49,35 +70,6 @@ static const std::string currentDateTime(std::string format) {
     return buf;
 }
 
-static void showMessage(std::string msg, std::string scope = "", bool error = false, bool show_time = true)
-{
-    std::unique_lock<std::mutex> lck(mtx);
-    std::stringstream ss;
-
-    if (show_time)
-        ss << "[" << currentDateTime("%H:%M:%S %d/%m/%Y") << "] ";
-
-    if (error)
-        ss << "[ERR] ";
-    else
-        ss << "[INF] ";
-
-    if (!scope.empty())
-        ss << "(" << scope << ") ";
-    ss << msg;
-
-    if (error) {
-        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 4);
-        std::cout << ss.str() << std::endl;
-        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
-    }
-    else {
-        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 8);
-        std::cout << ss.str() << std::endl;
-        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
-    }
-}
-
 static bool doesFileExist(LPCWSTR lpszFilename)
 {
     DWORD attr = GetFileAttributes(lpszFilename);
@@ -98,6 +90,16 @@ static void ToUpper(std::string& str)
 static void ToLower(std::string& str)
 {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+}
+
+static void ToUpper(std::wstring& wstr)
+{
+    std::transform(wstr.begin(), wstr.end(), wstr.begin(), ::toupper);
+}
+
+static void ToLower(std::wstring& wstr)
+{
+    std::transform(wstr.begin(), wstr.end(), wstr.begin(), ::tolower);
 }
 
 static void ToLower(unsigned char* Pstr)
@@ -142,7 +144,7 @@ static std::string getConfigEntry(std::string name, std::string key, bool allow_
 
     newfile.open(name, std::ios::in);
     if (newfile.good() == false) {
-        showMessage("Unable to create file buffer for \"" + name + "\" !", "getConfigEntry", true);
+//        Logger::showMessage("Unable to create file buffer for \"" + name + "\" !", "getConfigEntry", true);
         return result;
     }
 
@@ -160,7 +162,7 @@ static std::string getConfigEntry(std::string name, std::string key, bool allow_
         newfile.close();
     }
     else {
-        showMessage("Unable to open file \"" + name + "\" !", "getConfigEntry", true);
+//        Logger::showMessage("Unable to open file \"" + name + "\" !", "getConfigEntry", true);
     }
     return result;
 }

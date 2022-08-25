@@ -4,6 +4,7 @@
 #include "curl/curl.h"
 
 #include "Utils.h"
+#include "Logger.h"
 #include "GameQuery.h"
 #include "ComputerQuery.h"
 
@@ -21,10 +22,10 @@
 
 
 // EES VERSION
-static const std::string EES_VERSION_STR = "1.0.1";
+static const std::string EES_VERSION_STR = "1.0.2";
 static const unsigned int EES_VERSION_MAJOR = 1;
 static const unsigned int EES_VERSION_MINOR = 0;
-static const unsigned int EES_VERSION_PATCH = 1;
+static const unsigned int EES_VERSION_PATCH = 2;
 // END EES VERSION
 
 // EES HARD-CODED SETTINGS

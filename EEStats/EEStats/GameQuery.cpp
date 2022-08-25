@@ -14,15 +14,14 @@ GameQuery::GameQuery()
 {
     TCHAR szExeFileName[MAX_PATH];
     GetModuleFileName(NULL, szExeFileName, MAX_PATH);
-    std::string path = utf16ToUtf8(szExeFileName);
-    std::string exeFileName = path.substr(path.find_last_of("/\\") + 1);
+    std::wstring exeFileName = getFileName(std::wstring(szExeFileName), true);
 
     ToUpper(exeFileName);
 
     _productType = PT_Unknown;
-    if (exeFileName.compare("EMPIRE EARTH.EXE") == 0)
+    if (exeFileName.compare(L"EMPIRE EARTH.EXE") == 0)
         _productType = PT_EE;
-    else if (exeFileName.compare("EE-AOC.EXE") == 0)
+    else if (exeFileName.compare(L"EE-AOC.EXE") == 0)
         _productType = PT_AoC;
 };
 

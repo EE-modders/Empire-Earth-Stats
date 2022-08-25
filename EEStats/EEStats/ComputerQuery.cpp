@@ -3,6 +3,7 @@
 #include "ComputerQuery.h"
 #include "WmiHelper.h"
 #include "Utils.h"
+#include "Logger.h"
 
 #include <iostream>
 #include <codecvt>
@@ -337,7 +338,7 @@ ComputerQuery::WindowsVersion ComputerQuery::getWindowsVersionCQ()
     auto version_wmi = getWindowsVersion();
 
     if (version_wmi.empty()) {
-        showMessage("Unable to recover version from WMI !", "ComputerQuery", 1);
+        Logger::showMessage("Unable to recover version from WMI !", "ComputerQuery", 1);
         return WinUnknown;
     }
 
@@ -357,6 +358,6 @@ ComputerQuery::WindowsVersion ComputerQuery::getWindowsVersionCQ()
         return WinVista;
     if (version_wmi.find_first_of("5.1" == 0) || version_wmi.find_first_of("5.2" == 0))
         return WinXP;
-    showMessage("Unable to detect Windows version !", "ComputerQuery", 1);
+    Logger::showMessage("Unable to detect Windows version !", "ComputerQuery", 1);
     return WinUnknown;
 }

@@ -11,54 +11,46 @@
 
 static Library* lib = nullptr;
 
-bool __stdcall Attach(HMODULE hModule)
+bool __stdcall Attach()
 {
+    std::wstring dllName = getFileName(getDllPath(), false);
+
     // Instant create mutex to avoid multiple load if the DLL stop for some reasons during game startup
-    HANDLE handleMutex = CreateMutex(NULL, TRUE, (L"EEStats_" + std::to_wstring(GetCurrentProcessId())).c_str());
+    HANDLE handleMutex = CreateMutex(NULL, TRUE, (dllName + L"_" + std::to_wstring(GetCurrentProcessId())).c_str());
     if (GetLastError() == ERROR_ALREADY_EXISTS)
         return false;
 
-    FILE* f;
+    Logger::init(dllName);
 
-#ifdef _DEBUG
-    if (!GetConsoleWindow()) // Already Allocated
-        AllocConsole();
-    freopen_s(&f, "CONOUT$", "w", stdout);
-    freopen_s(&f, "CONOUT$", "w", stderr); // Not required technically, but required for cURL verbose
-#else
-    // Delete log after a given size
-    if (doesFileExist(L"EEStats.log") && fileSize(L"EEStats.log") > 2 /*Mo*/ * 100 * 100 * 100)
-        DeleteFile(L"EEStats.log");
-    freopen_s(&f, "EEStats.log", "a", stdout);
-    // crash if anything use it ! freopen_s(&f, "EEStats.log", "a", stderr);
-#endif // DEBUG
+    Logger::showMessage("Attach!", "DllMain");
 
-    showMessage("Attach!", "DllMain");
-
-    showMessage("Init Library...", "DllMain");
-
+    Logger::showMessage("Init Library...", "DllMain");
     if (lib) {
-        showMessage("Library Already Initialized...", "DllMain");
+        Logger::showMessage("Library Already Initialized...", "DllMain");
         return false;
     }
 
-    auto initLamda = [](void* data) -> unsigned int __stdcall
+    auto initLamda = [](void* data) -> unsigned int
     {
         try {
             lib = new Library();
+            if (lib == nullptr)
+                throw std::exception("Unable to init Library!");
         }
         catch (std::exception ex) {
-            showMessage(std::string(ex.what()), "DllMain", 1);
+            Logger::showMessage("Library Init Error: " + std::string(ex.what()), "DllMain", 1);
             return 0;
         }
-        showMessage("Library Initialized!", "DllMain");
+
+        Logger::showMessage("Library Initialized!", "DllMain");
+
         lib->PrintCredits();
         lib->UpdateAttachRoutine();
         lib->StartLibraryThread();
         return 1;
     };
 
-    showMessage("Starting Library Thread!", "DllMain");
+    Logger::showMessage("Starting Library Thread!", "DllMain");
     HANDLE initThreadHandle = (HANDLE)_beginthreadex(0, 0, initLamda, 0, 0, 0);
 
     return true;
@@ -67,7 +59,7 @@ bool __stdcall Attach(HMODULE hModule)
 // Be really REALLY fast here, the game don't fk care if it take more than <random time...> it just kill it
 bool __stdcall Detach()
 {
-    showMessage("Detach!", "DllMain");
+    Logger::showMessage("Detach!", "DllMain");
     if (lib != nullptr) {
         lib->UpdateDetachRoutine();
         delete lib;
@@ -89,7 +81,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     switch (ul_reason_for_call)
     {
         case DLL_PROCESS_ATTACH: {
-            return Attach(hModule);
+            return Attach();
         }
         case DLL_THREAD_ATTACH:
             break;
