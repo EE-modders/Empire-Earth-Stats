@@ -27,7 +27,6 @@ public:
 	bool isLoaded();
 	bool isPlaying();
 	bool inLobby();
-	bool inScenarioEditor();
 
 	bool isMinimized(); // WARNING: The debug console is also considered as the game Window
 	bool isElevated();

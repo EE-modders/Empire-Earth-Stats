@@ -32,18 +32,11 @@ bool GameQuery::isLoaded() {
 }
 
 bool GameQuery::isPlaying() {
-    if (inScenarioEditor()) // For some reasons the scenario EDITOR is also considered as Playing :V
-        return false;
     return 0 != *(int*)calcAddress(0x00518378 + 0x44);
 }
 
 bool GameQuery::inLobby() {
     return 0 != *(int*)calcAddress(0x00544254);
-}
-
-bool GameQuery::inScenarioEditor() {
-    memoryPTR ptr = { 0xEF2C4, { 0x88 } };
-    return 0 != *(int*)tracePointer(&ptr);
 }
 
 bool GameQuery::isMinimized()
@@ -185,14 +178,11 @@ GameQuery::ScreenType GameQuery::getCurrentScreen()
 {
     bool playing = isPlaying();
     bool lobby = inLobby();
-    bool scnEditor = inScenarioEditor();
 
     if (playing && lobby)
         return ST_PlayingOnline;
     else if (playing && !lobby)
         return ST_PlayingSolo;
-    else if (scnEditor)
-        return ST_ScenarioEditor;
     else if (!playing && lobby)
         return ST_Lobby;
     else
