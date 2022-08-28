@@ -12,7 +12,7 @@ unsigned int __stdcall PingThread(void* data)
     EEStats* ees = static_cast<EEStats*>(data);
 
     if (ees == nullptr) {
-        Logger::showMessage("Unable to recover EEStats instance!!!", "PingThread");
+        Logger::showMessage("Unable to recover EEStats instance!!!", "PingThread", true);
         return 0;
     }
 
@@ -110,7 +110,7 @@ unsigned int __stdcall PeformanceThread(void* data)
     }
 
     if (ees == nullptr || gq == nullptr) {
-        Logger::showMessage("Unable to recover EEStats or GameQuery instance!!!", "PeformanceThread");
+        Logger::showMessage("Unable to recover EEStats or GameQuery instance!!!", "PeformanceThread", true);
         return 0;
     }
 
@@ -185,7 +185,7 @@ unsigned int __stdcall ActivityThread(void* data)
     GameQuery::ScreenType lastScreen = GameQuery::ST_Unknown;
 
     if (ees == nullptr || gq == nullptr) {
-        Logger::showMessage("Unable to recover EEStats or GameQuery instance!!!", "ActivityThread");
+        Logger::showMessage("Unable to recover EEStats or GameQuery instance!!!", "ActivityThread", true);
         return 0;
     }
 
@@ -250,7 +250,7 @@ unsigned int __stdcall ActivityThread(void* data)
 void Library::StartLibraryThread()
 {
     if (_ees == nullptr) {
-        Logger::showMessage("Unable to recover EEStats instance!!!", "LibraryThread");
+        Logger::showMessage("Unable to recover EEStats instance!!!", "LibraryThread", true);
         return;
     }
 
@@ -276,7 +276,7 @@ void Library::StartLibraryThread()
     }
 
     if (gq == nullptr || cq == nullptr) {
-        Logger::showMessage("Unable to recover GameQuery or ComputerQuery instance!!!", "LibraryThread");
+        Logger::showMessage("Unable to recover GameQuery or ComputerQuery instance!!!", "LibraryThread", true);
         return;
     }
 
