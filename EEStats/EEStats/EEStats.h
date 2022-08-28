@@ -22,14 +22,14 @@
 
 
 // EES VERSION
-static const std::string EES_VERSION_STR = "1.0.2";
+static const std::string EES_VERSION_STR = "1.0.3";
 static const unsigned int EES_VERSION_MAJOR = 1;
 static const unsigned int EES_VERSION_MINOR = 0;
-static const unsigned int EES_VERSION_PATCH = 2;
+static const unsigned int EES_VERSION_PATCH = 3;
 // END EES VERSION
 
 // EES HARD-CODED SETTINGS
-const std::string EES_SETTINGS_URL = "https://stats.empireearth.eu/eestats";
+const std::string EES_SETTINGS_URL = "https://api.empireearth.eu/eestats/dll";
 // END EES HARD-CODED SETTINGS
 
 #include <string>

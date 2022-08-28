@@ -29,8 +29,14 @@ public:
     {
         std::lock_guard<std::mutex> lck(getInstance()._mtx);
 
+        std::wstring logName = dllName + L".log";
+        LPCWSTR logNameC = logName.c_str();
+
+        if (doesFileExist(logNameC) && fileSize(logNameC) > 2 /*Mo*/ * 100 * 100 * 100)
+            DeleteFile(logNameC);
+
         if (!getInstance()._ofs.is_open())
-            getInstance()._ofs.open(dllName + L".log", std::ios::out | std::ios::app);
+            getInstance()._ofs.open(logName, std::ios::out | std::ios::app);
 
 #ifdef _DEBUG
         if (!GetConsoleWindow())
