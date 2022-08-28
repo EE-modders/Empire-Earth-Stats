@@ -201,7 +201,6 @@ bool EEStats::sendSessionInfos()
     return true;
 }
 
-
 bool EEStats::sendPerformanceInfos(int fps_average, std::string played_time)
 {
     if (_session_id.empty()) {

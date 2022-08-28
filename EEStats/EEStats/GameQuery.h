@@ -21,7 +21,7 @@ public:
 		ST_PlayingSolo,
 		ST_PlayingOnline,
 		ST_Lobby,
-		ST_ScenarioEditor
+		ST_ScenarioEditor		// Can't be detected
 	};
 
 	bool isLoaded();

@@ -134,6 +134,7 @@ unsigned int __stdcall PeformanceThread(void* data)
         else if (wasPlaying) {
             Logger::showMessage("Back to menu, calculating performance history...", "PeformanceThread");
 
+            wasPlaying = false;
             if (fpsHistory.size() >= (int) ((float) minTimePlayedToSend / (float) updateInterval))
             {
                 Logger::showMessage("Sending performance history...", "PeformanceThread");
@@ -156,6 +157,8 @@ unsigned int __stdcall PeformanceThread(void* data)
                 auto seconds = std::chrono::duration_cast<std::chrono::seconds>(timePlayed);
                 timePlayed -= seconds;
 
+                ss << hours.count() << ":" << minutes.count() << ":" << seconds.count();
+
                 if (ees->sendPerformanceInfos((int)moy, ss.str()))
                     Logger::showMessage("Performance history sent!", "PeformanceThread");
                 else
@@ -166,8 +169,6 @@ unsigned int __stdcall PeformanceThread(void* data)
                 while (!fpsHistory.empty())
                     fpsHistory.pop();
             }
-
-            wasPlaying = false;
         }
     }
     Logger::showMessage("Exit Thread!", "PeformanceThread"); // Will sadly never work...
@@ -310,7 +311,7 @@ void Library::StartLibraryThread()
         Logger::showMessage("Your game version isn't supported...", "LibraryThread", true);
         return;
     }
-    // Register hook before game load
+    // Register hook before game load, to show it af first load
     gq->setVersionSuffix(" (EE Stats v" + EES_VERSION_STR + ")"); // TODO: A shared lib :V (.lib ? or .dll ? idk)
 
     Logger::showMessage("Waiting for the game to fully load...", "LibraryThread");
