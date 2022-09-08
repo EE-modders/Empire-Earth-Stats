@@ -6,8 +6,6 @@
 #include <iostream>
 #include <string>
 
-#pragma comment(lib, "wbemuuid.lib")
-
 WmiHelper::WmiHelper()
 {
     HRESULT hres;

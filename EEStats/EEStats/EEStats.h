@@ -1,31 +1,18 @@
 #pragma once
 
 #define CURL_STATICLIB
-#include "curl/curl.h"
+#include <curl.h>
 
 #include "Utils.h"
 #include "Logger.h"
 #include "GameQuery.h"
 #include "ComputerQuery.h"
 
-#ifdef _DEBUG
-#pragma comment (lib, "curl/libcurl_a_debug.lib")
-#else
-#pragma comment (lib, "curl/libcurl_a.lib")
-#endif
-
-#pragma comment (lib, "Normaliz.lib")
-#pragma comment (lib, "Ws2_32.lib")
-#pragma comment (lib, "Wldap32.lib")
-#pragma comment (lib, "Crypt32.lib")
-#pragma comment (lib, "advapi32.lib")
-
-
 // EES VERSION
-static const std::string EES_VERSION_STR = "1.0.3";
+static const std::string EES_VERSION_STR = "1.0.4";
 static const unsigned int EES_VERSION_MAJOR = 1;
 static const unsigned int EES_VERSION_MINOR = 0;
-static const unsigned int EES_VERSION_PATCH = 3;
+static const unsigned int EES_VERSION_PATCH = 4;
 // END EES VERSION
 
 // EES HARD-CODED SETTINGS
@@ -84,6 +71,5 @@ private:
 
 
 	std::pair<bool, std::pair<long, std::string>> sendRequest(std::string path, std::string request_type, std::string params = "");
-	// Was for matomo std::string buildUserAgent(struct curl_slist*& headers);
 };
 
