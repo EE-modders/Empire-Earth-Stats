@@ -13,7 +13,10 @@ static Library* lib = nullptr;
 
 bool __stdcall Attach()
 {
-    std::wstring dllName = getFileName(getDllPath(), false);
+    if (GameQuery().getProductType() == GameQuery::PT_Unknown)
+        return true; // Loaded by another program than the game, no need to do anything.
+    std::wstring dllPath = getDllPath();
+    std::wstring dllName = getFileName(dllPath, false);
 
     // Instant create mutex to avoid multiple load if the DLL stop for some reasons during game startup
     HANDLE handleMutex = CreateMutex(NULL, TRUE, (dllName + L"_" + std::to_wstring(GetCurrentProcessId())).c_str());
@@ -59,6 +62,9 @@ bool __stdcall Attach()
 // Be really REALLY fast here, the game don't fk care if it take more than <random time...> it just kill it
 bool __stdcall Detach()
 {
+    if (GameQuery().getProductType() == GameQuery::PT_Unknown)
+        return true; // Loaded by another program than the game, no need to do anything.
+
     Logger::showMessage("Detach!", "DllMain");
     if (lib != nullptr) {
         lib->UpdateDetachRoutine();
@@ -70,7 +76,7 @@ bool __stdcall Detach()
 #endif
         return true;
     }
-    return false;
+    return true;
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule,
