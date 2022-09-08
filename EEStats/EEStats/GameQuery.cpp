@@ -248,6 +248,7 @@ bool GameQuery::isSupportedVersion() {
 
 std::string newVersionStrCpp;
 char* newVersionStr;
+char** newVersionStrPtr = &newVersionStr;
 DWORD asmVersionStrReturnAddr;
 
 void _asmVersionStr() {
@@ -264,7 +265,7 @@ void _asmVersionStr() {
     newVersionStr = new char[length];
 
     strcpy_s(newVersionStr, length, vs.str().c_str());
-    writeBytes(vStrPtr, &newVersionStr, 4);
+    writeBytes(vStrPtr, &newVersionStrPtr, 4);
 }
 
 void __declspec(naked) asmVersionString() {
