@@ -35,6 +35,15 @@ static std::wstring getFileName(std::wstring& path, bool withExtention)
     return result;
 }
 
+static std::wstring getCurrentHandleFileName()
+{
+    TCHAR szExeFilePath[MAX_PATH];
+    GetModuleFileName(NULL, szExeFilePath, MAX_PATH);
+    std::wstring szExeFilePathW = std::wstring(szExeFilePath);
+    std::wstring exeFileName = getFileName(szExeFilePathW, true);
+    return exeFileName;
+}
+
 static void trim(std::string& s) {
     s.erase(s.begin(), std::find_if_not(s.begin(), s.end(), [](char c) { return std::isspace(c); }));
     s.erase(std::find_if_not(s.rbegin(), s.rend(), [](char c) { return std::isspace(c); }).base(), s.end());

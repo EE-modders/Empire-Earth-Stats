@@ -12,9 +12,10 @@
 
 GameQuery::GameQuery()
 {
-    TCHAR szExeFileName[MAX_PATH];
-    GetModuleFileName(NULL, szExeFileName, MAX_PATH);
-    std::wstring exeFileName = getFileName(std::wstring(szExeFileName), true);
+    TCHAR szExeFilePath[MAX_PATH];
+    GetModuleFileName(NULL, szExeFilePath, MAX_PATH);
+    std::wstring szExeFilePathW = std::wstring(szExeFilePath);
+    std::wstring exeFileName = getFileName(szExeFilePathW, true);
 
     ToUpper(exeFileName);
 
@@ -218,7 +219,7 @@ char* GameQuery::getGameBaseVersion()
         return (char*)calcAddress(0x04A9030);
     if (_productType == PT_AoC)
         return (char*)calcAddress(0x04BF570);
-    return "";
+    return NULL;
 }
 
 char* GameQuery::getGameDataVersion()
@@ -230,7 +231,7 @@ char* GameQuery::getGameDataVersion()
         return (char*)tracePointer(&memEEC);
     if (_productType == PT_AoC)
         return (char*)tracePointer(&memAOC);
-    return "";
+    return NULL;
 }
 
 bool GameQuery::isSupportedVersion() {
@@ -247,7 +248,6 @@ bool GameQuery::isSupportedVersion() {
 
 std::string newVersionStrCpp;
 char* newVersionStr;
-char** newVersionStrPtr = &newVersionStr;
 DWORD asmVersionStrReturnAddr;
 
 void _asmVersionStr() {
@@ -264,7 +264,7 @@ void _asmVersionStr() {
     newVersionStr = new char[length];
 
     strcpy_s(newVersionStr, length, vs.str().c_str());
-    writeBytes(vStrPtr, &newVersionStrPtr, 4);
+    writeBytes(vStrPtr, &newVersionStr, 4);
 }
 
 void __declspec(naked) asmVersionString() {
@@ -282,9 +282,14 @@ void __declspec(naked) asmVersionString() {
 
 void GameQuery::setVersionSuffix(std::string suffix)
 {
+    DWORD versionPtr;
+    if (getProductType() == GameQuery::ProductType::PT_EE)
+        versionPtr = 0x1D16F2;
+    else
+        throw std::exception("Unable to set Version suffix for AoC for the moment!");
     newVersionStrCpp = suffix;
     functionInjector(
-        calcAddress(0x1D16F2),
+        calcAddress(versionPtr),
         asmVersionString,
         asmVersionStrReturnAddr,
         7
@@ -333,7 +338,7 @@ bool GameQuery::isVSyncEnabled()
     return 0 != (bool) calcAddress(0x544254);
 }
 
-DWORD LLETMPoll = *calcAddress(0x42329C);
+DWORD LLETMPoll;
 unsigned int nRenderedFrames = 0;
 DWORD fpshookReturnAddr;
 
@@ -351,21 +356,27 @@ void __declspec(naked) getFPSNew() {
 }
 
 bool isFpsInit = false;
-void setFPSUpdater()
+void setFPSUpdater(GameQuery::ProductType pt)
 {
-    isFpsInit = true;
+    if (isFpsInit)
+        return;
+    if (pt == GameQuery::ProductType::PT_EE)
+        LLETMPoll = *calcAddress(0x42329C);
+    else
+        throw std::exception("Unable to set FPS Updater for AoC for the moment!");
     functionInjector(
         calcAddress(0x24E29E),
         getFPSNew,
         fpshookReturnAddr,
         6
     );
+    isFpsInit = true;
 }
 
 float GameQuery::getFPS(float updateInterval)
 {
     if (!isFpsInit)
-        setFPSUpdater();
+        setFPSUpdater(getProductType());
     if (nRenderedFrames == 0 || updateInterval == 0)
         return 0; // Let's avoid some div 0
     float result = ((float) nRenderedFrames / updateInterval);
