@@ -165,13 +165,12 @@ std::string ComputerQuery::getProcessorArch()
         return "x64";
     case PROCESSOR_ARCHITECTURE_INTEL:
         return "x86";
-        break;
     case PROCESSOR_ARCHITECTURE_ARM:
         return "ARM";
-    case 12 /*PROCESSOR_ARCHITECTURE_ARM64*/:
+    case 12 /* Don't exist in SDK7 PROCESSOR_ARCHITECTURE_ARM64*/:
         return "ARM64";
     default:
-        return "";
+        return "Unknown";
     }
 }
 
