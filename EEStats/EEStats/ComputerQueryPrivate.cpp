@@ -41,6 +41,11 @@ bool ComputerQuery::runInVirtualBox()
      return false;
 }
 
+bool ComputerQuery::runInParallelsDesktop()
+{
+     return false;
+}
+
 bool ComputerQuery::runInOtherVM()
 {
      return false;
@@ -48,7 +53,7 @@ bool ComputerQuery::runInOtherVM()
 
 bool ComputerQuery::runInVM()
 {
-    if (runInOtherVM() || runInVMWare() || runInVirtualBox() || runInVirtualPC())
+    if (runInOtherVM() || runInVMWare() || runInVirtualBox() || runInVirtualPC() || runInParallelsDesktop())
         return true;
     return false;
 }
