@@ -35,6 +35,8 @@ public:
 	uint32_t getProcessorNumberOfCores();
 	uint16_t getProcessorLoadPercentage(); // all cores
 
+	int getProcessAddressWidth();
+
 	// DX
 	int getDirectX_MajorVersion();
 	std::string getDirectX_WrapperVersion();
@@ -54,6 +56,7 @@ public:
 	bool runInVirtualPC();
 	bool runInVMWare();
 	bool runInVirtualBox();
+	bool runInParallelsDesktop();
 	bool runInOtherVM();
 	bool runInVM();
 

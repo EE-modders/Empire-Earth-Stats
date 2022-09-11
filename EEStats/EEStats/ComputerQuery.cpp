@@ -154,24 +154,135 @@ std::string ComputerQuery::getProcessorName()
     return utf16ToUtf8(queryResult.at(0));
 }
 
+typedef BOOL(__stdcall* PISWOW64PROCESS)(
+    HANDLE hProcess,
+    PBOOL Wow64Process
+    );
+
+
+typedef BOOL(__stdcall* PISWOW64PROCESS2)(
+    HANDLE hProcess,
+    USHORT* pProcessMachine,
+    USHORT* pNativeMachine
+    );
+
+// May not exist in old Windows SDK
+#ifndef PROCESSOR_ARCHITECTURE_ARM64
+#define PROCESSOR_ARCHITECTURE_ARM64 12
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_ARM64
+#define IMAGE_FILE_MACHINE_ARM64 0xAA64
+#endif
+
+int ComputerQuery::getProcessAddressWidth()
+{
+    PISWOW64PROCESS pIsWow64Process = NULL;
+    PISWOW64PROCESS2 pIsWow64Process2 = NULL;
+    BOOL isWow64Old = FALSE;
+    BOOL isWow64New = FALSE;
+    HMODULE k32h = GetModuleHandle(_T("kernel32.dll"));
+    USHORT pProcessMachine = 0;
+    USHORT pNativeMachine = 0;
+
+    if (k32h != NULL) {
+        pIsWow64Process = (PISWOW64PROCESS)GetProcAddress(k32h, "IsWow64Process");
+        if (pIsWow64Process) {
+            pIsWow64Process(GetCurrentProcess(), &isWow64Old);
+        }
+
+        pIsWow64Process2 = (PISWOW64PROCESS2)GetProcAddress(k32h, "IsWow64Process2");
+        if (pIsWow64Process2) {
+            isWow64New = pIsWow64Process2(GetCurrentProcess(), &pProcessMachine, &pNativeMachine);
+        }
+    }
+
+    if ((!pIsWow64Process2 || !isWow64New) && pIsWow64Process) {
+
+        SYSTEM_INFO systemInfo;
+        GetNativeSystemInfo(&systemInfo);
+
+        switch (systemInfo.wProcessorArchitecture)
+        {
+        case PROCESSOR_ARCHITECTURE_ARM64:
+        case PROCESSOR_ARCHITECTURE_AMD64:
+            return isWow64Old ? 32 : 64;
+        case PROCESSOR_ARCHITECTURE_ARM:
+        case PROCESSOR_ARCHITECTURE_INTEL:
+            return 32;
+        default:
+            return -1;
+        }
+    }
+    else if (pIsWow64Process2) {
+
+        switch (pProcessMachine)
+        {
+        case IMAGE_FILE_MACHINE_I386:
+        case IMAGE_FILE_MACHINE_ARM:
+            return 32;
+        case IMAGE_FILE_MACHINE_UNKNOWN:
+        case IMAGE_FILE_MACHINE_AMD64:
+        case IMAGE_FILE_MACHINE_ARM64:
+            return 64;
+        default:
+            return -1;
+        }
+    }
+    return -1;
+}
+
 std::string ComputerQuery::getProcessorArch()
 {
-    SYSTEM_INFO systemInfo;
-    GetNativeSystemInfo(&systemInfo);
+    PISWOW64PROCESS2 pIsWow64Process2 = NULL;
+    BOOL isWow64New = FALSE;
+    HMODULE k32h = GetModuleHandle(_T("kernel32.dll"));
+    USHORT pProcessMachine = 0;
+    USHORT pNativeMachine = 0;
 
-    switch (systemInfo.wProcessorArchitecture)
-    {
-    case PROCESSOR_ARCHITECTURE_AMD64:
-        return "x64";
-    case PROCESSOR_ARCHITECTURE_INTEL:
-        return "x86";
-    case PROCESSOR_ARCHITECTURE_ARM:
-        return "ARM";
-    case 12 /* Don't exist in SDK7 PROCESSOR_ARCHITECTURE_ARM64*/:
-        return "ARM64";
-    default:
-        return "Unknown";
+    if (k32h != NULL) {
+        pIsWow64Process2 = (PISWOW64PROCESS2)GetProcAddress(k32h, "IsWow64Process2");
+        if (pIsWow64Process2) {
+            isWow64New = pIsWow64Process2(GetCurrentProcess(), &pProcessMachine, &pNativeMachine);
+        }
     }
+
+    if (!pIsWow64Process2 || !isWow64New) {
+
+        SYSTEM_INFO systemInfo;
+        GetNativeSystemInfo(&systemInfo);
+
+        switch (systemInfo.wProcessorArchitecture)
+        {
+        case PROCESSOR_ARCHITECTURE_AMD64:
+            return "x86_64";
+        case PROCESSOR_ARCHITECTURE_INTEL:
+            return "x86";
+        case PROCESSOR_ARCHITECTURE_ARM:
+            return "ARM";
+        case PROCESSOR_ARCHITECTURE_ARM64:
+            return "ARM64";
+        default:
+            return "Unknown";
+        }
+    }
+    else {
+
+        switch (pNativeMachine)
+        {
+        case IMAGE_FILE_MACHINE_I386:
+            return "x86";
+        case IMAGE_FILE_MACHINE_AMD64:
+            return "x86_64";
+        case IMAGE_FILE_MACHINE_ARM:
+            return "ARM";
+        case IMAGE_FILE_MACHINE_ARM64:
+            return "ARM64";
+        default:
+            return "Unknown";
+        }
+    }
+    return "Unknown";
 }
 
 uint32_t ComputerQuery::getProcessorNumberOfCores()
