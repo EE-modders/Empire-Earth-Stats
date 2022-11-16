@@ -45,8 +45,8 @@ static std::wstring getCurrentHandleFileName()
 }
 
 static void trim(std::string& s) {
-    s.erase(s.begin(), std::find_if_not(s.begin(), s.end(), [](char c) { return std::isspace(c); }));
-    s.erase(std::find_if_not(s.rbegin(), s.rend(), [](char c) { return std::isspace(c); }).base(), s.end());
+	s.erase(s.begin(), std::find_if_not(s.begin(), s.end(), [](char c) { return std::isspace(c, std::locale::classic()); }));
+    s.erase(std::find_if_not(s.rbegin(), s.rend(), [](char c) { return std::isspace(c, std::locale::classic()); }).base(), s.end());
 }
 
 static void replaceAll(std::string& str, const std::string& from, const std::string& to) {

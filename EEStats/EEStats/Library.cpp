@@ -4,6 +4,7 @@
 
 #include <thread>
 #include <queue>
+#include <process.h>
 
 unsigned int __stdcall PingThread(void* data)
 {
