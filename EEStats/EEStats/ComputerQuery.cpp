@@ -313,7 +313,7 @@ int ComputerQuery::getDirectX_MajorVersion()
             return 11;
         case WinVista: {
             auto updIds = _wmiHelper->queryWMI("SELECT HotFixID FROM Win32_QuickFixEngineering", L"HotFixID");
-            for (auto iter = updIds.begin(); iter != updIds.end();)
+            for (auto iter = updIds.begin(); iter != updIds.end(); ++iter)
                 if (iter->compare(L"KB971644") == 0) // Nice one MS
                     return 11;
             return 10;

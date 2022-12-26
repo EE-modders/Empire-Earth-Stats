@@ -4,6 +4,13 @@
 
 #include <string>
 #include <iostream>
+#include <ShlObj.h>
+
+#ifndef _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+    #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#endif
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 
 class Library
 {
@@ -16,7 +23,7 @@ public:
     {
         Logger::showMessage("Loading...", "Library");
 
-        _dllPath = getDllPath();
+        _dllPath = getDllPathUtils();
 
         // EE Stats
         _ees = new EEStats(EES_SETTINGS_URL, EES_VERSION_STR);
@@ -68,8 +75,10 @@ public:
         {
             Logger::showMessage("The remains of a completed update have been found, cleaning...", "Library");
 
-            if (DeleteFile(oldFile.c_str()))
+            if (DeleteFile(oldFile.c_str())) {
+                SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATH | SHCNF_FLUSHNOWAIT, fs::current_path().c_str(), NULL); // Refresh explorer
                 Logger::showMessage("The cleaning was successful!", "Library");
+            }
             else
                 Logger::showMessage("Unable to clean!", "Library", true);
         }
@@ -88,6 +97,7 @@ public:
             Logger::showMessage("An update is pending, deactivating the current version and activating the new one...", "Library");
             
             if (MoveFile(currentFile.c_str(), oldFile.c_str()) && MoveFile(updateFile.c_str(), currentFile.c_str())) {
+                SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATH | SHCNF_FLUSHNOWAIT, fs::current_path().c_str(), NULL); // Refresh explorer
                 Logger::showMessage("The update seems to be installed, the next boot will start the new one and remove the old version!", "Library");
             }
             else {

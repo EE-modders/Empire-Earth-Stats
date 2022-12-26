@@ -2,64 +2,67 @@
 
 #include "ComputerQuery.h"
 #include "Utils.h"
-
 #include "sha512.h"
+
+#include <thread>
+#include "Logger.h"
 
 std::string ComputerQuery::getBiosSerial()
 {
-     return "";
+    return "";
 }
+
 
 std::string ComputerQuery::getWindowsDiskSerial()
 {
-     return "";
+    return "";
 }
 
 std::string ComputerQuery::getComputerSerial()
 {
-     return "";
+    return "";
 }
 
 std::string ComputerQuery::getUID()
 {
-     return "";
+    return "";
 }
 
 bool ComputerQuery::runInVirtualPC() // Who use that ?
 {
-     return false;
+    return false;
 }
-
 
 bool ComputerQuery::runInVMWare()
 {
-     return false;
+    return false;
 }
 
 bool ComputerQuery::runInVirtualBox()
 {
-     return false;
+    return false;
 }
 
 bool ComputerQuery::runInParallelsDesktop()
 {
-     return false;
+    return false;
 }
 
 bool ComputerQuery::runInOtherVM()
 {
-     return false;
+    return false;
 }
 
 bool ComputerQuery::runInVM()
 {
-    if (runInOtherVM() || runInVMWare() || runInVirtualBox() || runInVirtualPC() || runInParallelsDesktop())
+    if (runInOtherVM() || runInVMWare() || runInVirtualBox() || runInVirtualPC() /*|| runInParallelsDesktop() don't work*/)
         return true;
     return false;
 }
 
 /// DLL EXPORT FOR EE COMMUNITY SETUP
 #include <thread>
+#include <process.h>
 #define DllExport extern "C" __declspec(dllexport)
 
 DllExport const char* EEStats_getUID()

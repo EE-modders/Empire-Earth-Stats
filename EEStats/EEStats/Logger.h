@@ -18,7 +18,16 @@ private:
 
 public:
     Logger() = default;
-	~Logger() = default;
+    ~Logger() {
+        if (_ofs) {
+            _ofs.flush();
+            _ofs.close();
+        }
+
+        if (_f) {
+            fclose(_f);
+        }
+    }
 
     static Logger& getInstance() {
         static Logger logger;

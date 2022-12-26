@@ -15,7 +15,7 @@ bool __stdcall Attach()
 {
     if (GameQuery().getProductType() == GameQuery::PT_Unknown)
         return true; // Loaded by another program than the game, no need to do anything.
-    std::wstring dllPath = getDllPath();
+    std::wstring dllPath = getDllPathUtils();
     std::wstring dllName = getFileName(dllPath, false);
 
     // Instant create mutex to avoid multiple load if the DLL stop for some reasons during game startup

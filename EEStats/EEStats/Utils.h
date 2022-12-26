@@ -9,7 +9,7 @@
 #include <string>
 #include <regex>
 
-static std::wstring getDllPath()
+static std::wstring getDllPathUtils()
 {
     // Dll Name
     TCHAR dllPath[MAX_PATH];
@@ -17,7 +17,7 @@ static std::wstring getDllPath()
     // Passing a static function to recover the DLL Module Handle
     if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        (LPWSTR)&getDllPath, &hModule)) {
+        (LPWSTR)&getDllPathUtils, &hModule)) {
         throw std::exception("Unable to get module handle of an internal function");
     }
     else {

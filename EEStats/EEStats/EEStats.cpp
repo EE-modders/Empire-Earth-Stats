@@ -458,6 +458,7 @@ std::pair<bool, std::pair<long, std::string>> EEStats::sendRequest(std::string p
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &replyTxt);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, ("EmpireEarthStats/" + _lib_version).c_str());
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 1000L);
 #ifdef _DEBUG
     // WARN: Using freopen_s to redirect to a file will crash
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
